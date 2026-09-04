@@ -16,8 +16,8 @@ spec:
     spec:
       containers:
         - name: backend
-          image: IMAGE_PLACEHOLDER_BACKEND
-          imagePullPolicy: IfNotPresent
+          image: asia-southeast2-docker.pkg.dev/hology-67/larisin-repo/backend:latest
+          imagePullPolicy: Always
           ports:
             - containerPort: 8080
           env:
@@ -49,7 +49,7 @@ kind: Service
 metadata:
   name: larisin-backend-svc
 spec:
-  type: ClusterIP
+  type: LoadBalancer
   selector:
     app: larisin-backend
   ports:
@@ -74,8 +74,8 @@ spec:
     spec:
       containers:
         - name: frontend
-          image: IMAGE_PLACEHOLDER_FRONTEND
-          imagePullPolicy: IfNotPresent
+          image: asia-southeast2-docker.pkg.dev/hology-67/larisin-repo/frontend:latest
+          imagePullPolicy: Always
           ports:
             - containerPort: 3000
           env:
