@@ -3,7 +3,6 @@ name: Deploy to GKE
 on:
   push:
     branches:
-      - feat/unmock-backend-gke
       - main
   workflow_dispatch:
 
@@ -11,7 +10,7 @@ env:
   PROJECT_ID: hology-67
   GAR_LOCATION: asia-southeast2
   GKE_CLUSTER: larisin-cluster
-  GKE_ZONE: asia-southeast2-a
+  GKE_ZONE: asia-southeast2
   REPOSITORY: larisin-repo
 
 jobs:
@@ -60,8 +59,7 @@ jobs:
 
       - name: Deploy to GKE
         run: |
-          sed -i "s|IMAGE_PLACEHOLDER_BACKEND|${{ env.IMAGE_BACKEND }}|g" k8s/deployment.yaml
-          sed -i "s|IMAGE_PLACEHOLDER_FRONTEND|${{ env.IMAGE_FRONTEND }}|g" k8s/deployment.yaml
-          kubectl apply -f k8s/deployment.yaml
-          kubectl rollout status deployment/larisin-backend --timeout=120s
-          kubectl rollout status deployment/larisin-frontend --timeout=120s
+          kubectl set image deployment/larisin-backend backend=${{ env.IMAGE_BACKEND }}
+          kubectl set image deployment/larisin-frontend frontend=${{ env.IMAGE_FRONTEND }}
+          kubectl rollout status deployment/larisin-backend --timeout=180s
+          kubectl rollout status deployment/larisin-frontend --timeout=180s
