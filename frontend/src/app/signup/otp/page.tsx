@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/Button";
 import { PublicNavbar } from "@/components/layout/PublicNavbar";
+import { OtpIllustration } from "@/components/illustrations/Illustrations";
 
 const OTP_LENGTH = 5;
 const RESEND_SECONDS = 58;
@@ -84,8 +85,9 @@ export default function OtpPage() {
   return (
     <div className="flex flex-1 flex-col">
       <PublicNavbar />
-      <main className="mx-auto flex w-full max-w-[1440px] flex-1 items-center justify-center px-6 py-16">
-        <section className="w-full max-w-[577px]">
+      <main className="mx-auto flex w-full max-w-[1440px] flex-1 items-center px-6 py-16">
+        <div className="grid w-full items-center gap-12 lg:grid-cols-2">
+          <section className="w-full max-w-[577px]">
           <div className="mb-8 flex flex-col gap-2">
             <h1 className="text-4xl font-bold font-heading text-fg-default">
               Isi Kode Verifikasi!
@@ -151,6 +153,8 @@ export default function OtpPage() {
             </p>
           </form>
         </section>
+          <OtpIllustration className="hidden lg:block" />
+        </div>
       </main>
     </div>
   );

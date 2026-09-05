@@ -1,0 +1,168 @@
+- generic [ref=f10e1]:
+  - generic [ref=f10e2]:
+    - complementary [ref=f10e3]:
+      - link "LARISIN" [ref=f10e4] [cursor=pointer]:
+        - /url: /
+        - img "LARISIN" [ref=f10e5]
+      - navigation [ref=f10e6]:
+        - link "Dashboard" [ref=f10e7] [cursor=pointer]:
+          - /url: /dashboard
+        - link "Stok" [ref=f10e11] [cursor=pointer]:
+          - /url: /stock
+        - link "Keuangan" [ref=f10e16] [cursor=pointer]:
+          - /url: /finance
+        - link "Forecast" [ref=f10e20] [cursor=pointer]:
+          - /url: /forecast
+        - link "Chatbot AI" [ref=f10e23] [cursor=pointer]:
+          - /url: /chatbot
+      - link "Keluar" [ref=f10e26] [cursor=pointer]:
+        - /url: /
+    - generic [ref=f10e30]:
+      - banner [ref=f10e31]:
+        - generic [ref=f10e32]:
+          - searchbox "Cari..." [ref=f10e37]
+          - generic [ref=f10e38]:
+            - button "Notifikasi" [ref=f10e39]
+            - generic [ref=f10e43]:
+              - generic [ref=f10e44]: Z
+              - generic [ref=f10e45]:
+                - generic [ref=f10e46]: Zafran
+                - generic [ref=f10e47]: Warung Mama Zafran
+      - main [ref=f10e48]:
+        - generic [ref=f10e49]:
+          - generic [ref=f10e50]:
+            - heading "Mau LARISIN apa hari ini?" [level=1] [ref=f10e51]
+            - generic [ref=f10e52]:
+              - button "Refresh Data" [ref=f10e53]
+              - button "Quick Scan" [active] [ref=f10e59]
+          - generic [ref=f10e65]:
+            - generic [ref=f10e66]:
+              - generic [ref=f10e67]: Penjualan hari ini
+              - generic [ref=f10e68]: …
+              - generic [ref=f10e69]: Naik 8%
+            - generic [ref=f10e73]:
+              - generic [ref=f10e74]: Total Terjual Hari Ini
+              - generic [ref=f10e75]: …
+              - generic [ref=f10e76]: Naik 8%
+            - generic [ref=f10e80]:
+              - generic [ref=f10e81]: Barang Paling TOP
+              - generic [ref=f10e82]: …
+              - generic [ref=f10e83]: Naik 8%
+          - generic [ref=f10e87]:
+            - generic [ref=f10e88]:
+              - generic [ref=f10e89]:
+                - generic [ref=f10e90]: Barang
+                - generic [ref=f10e91]: Terjual
+                - generic [ref=f10e92]: Keuntungan
+              - generic [ref=f10e93]:
+                - generic [ref=f10e94]:
+                  - generic [ref=f10e95]: Beras
+                  - generic [ref=f10e96]: "60"
+                  - generic [ref=f10e97]: Rp 100.000
+                - generic [ref=f10e98]:
+                  - generic [ref=f10e99]: Minyak
+                  - generic [ref=f10e100]: "32"
+                  - generic [ref=f10e101]: Rp 72.000
+                - generic [ref=f10e102]:
+                  - generic [ref=f10e103]: Gula
+                  - generic [ref=f10e104]: "32"
+                  - generic [ref=f10e105]: Rp 72.000
+                - generic [ref=f10e106]:
+                  - generic [ref=f10e107]: Tepung
+                  - generic [ref=f10e108]: "32"
+                  - generic [ref=f10e109]: Rp 72.000
+            - generic [ref=f10e110]:
+              - heading "Penjualan" [level=2] [ref=f10e111]
+              - generic [ref=f10e112]:
+                - generic [ref=f10e113]:
+                  - generic [ref=f10e114]: Minggu ini
+                  - generic [ref=f10e116]: Minggu lalu
+                - img "Grafik penjualan minggu ini dibanding minggu lalu" [ref=f10e118]:
+                  - generic [ref=f10e119]: "200"
+                  - generic [ref=f10e121]: "133"
+                  - generic [ref=f10e123]: "67"
+                  - generic [ref=f10e125]: "0"
+                  - generic [ref=f10e129]: Sen
+                  - generic [ref=f10e130]: Sel
+                  - generic [ref=f10e131]: Rab
+                  - generic [ref=f10e132]: Kam
+                  - generic [ref=f10e133]: Jum
+                  - generic [ref=f10e134]: Sab
+                  - generic [ref=f10e135]: Min
+          - generic [ref=f10e136]:
+            - generic [ref=f10e137]:
+              - heading "Penjualan Minggu Ini" [level=2] [ref=f10e138]
+              - generic [ref=f10e139]:
+                - img "Donut penjualan minggu ini" [ref=f10e140]
+                - generic [ref=f10e146]:
+                  - generic [ref=f10e147]:
+                    - generic [ref=f10e148]: Beras
+                    - generic [ref=f10e151]: 52.1%
+                  - generic [ref=f10e152]:
+                    - generic [ref=f10e153]: Minyak
+                    - generic [ref=f10e156]: 22.8%
+                  - generic [ref=f10e157]:
+                    - generic [ref=f10e158]: Gula
+                    - generic [ref=f10e161]: 13.9%
+                  - generic [ref=f10e162]:
+                    - generic [ref=f10e163]: Tepung
+                    - generic [ref=f10e166]: 11.2%
+            - generic [ref=f10e167]:
+              - heading "Insights" [level=2] [ref=f10e168]
+              - paragraph [ref=f10e169]: Ringkasan AI tentang performa warung kamu akan muncul di sini. Fitur ini segera hadir bersama asisten LARISIN.
+          - generic [ref=f10e170]:
+            - generic [ref=f10e171]:
+              - generic [ref=f10e172]: Stok Segera Habis!
+              - generic [ref=f10e173]: Minyak
+            - generic [ref=f10e174]:
+              - generic [ref=f10e175]: Stok Segera Expired!
+              - generic [ref=f10e176]: Sirup
+          - dialog [ref=f10e191]:
+            - generic [ref=f10e193]:
+              - generic [ref=f10e194]:
+                - heading "Quick Scan" [level=2] [ref=f10e195]
+                - button "Tutup" [ref=f10e196]
+              - generic [ref=f10e200]:
+                - generic [ref=f10e201]:
+                  - generic [ref=f10e202]: Kamera aktif
+                  - generic [ref=f10e205]:
+                    - generic [ref=f10e206]:
+                      - generic [ref=f10e207]: Masukkan Manual
+                      - textbox "Masukkan SKU" [ref=f10e208]
+                    - button "Masukkan" [ref=f10e209]
+                - generic [ref=f10e210]:
+                  - generic [ref=f10e211]:
+                    - generic [ref=f10e212]:
+                      - generic [ref=f10e213]: Barang yang telah discan (3)
+                      - button "Clear All" [ref=f10e214]
+                    - generic [ref=f10e215]:
+                      - generic [ref=f10e216]:
+                        - generic [ref=f10e217]:
+                          - generic [ref=f10e218]: Minyak Goreng Bimoli
+                          - generic [ref=f10e219]: "SKU: MGB - 2477 - 14"
+                        - generic [ref=f10e220]:
+                          - button "Kurangi jumlah Minyak Goreng Bimoli" [ref=f10e221]
+                          - generic [ref=f10e223]: "3"
+                          - button "Tambah jumlah Minyak Goreng Bimoli" [ref=f10e224]
+                      - generic [ref=f10e226]:
+                        - generic [ref=f10e227]:
+                          - generic [ref=f10e228]: Minyak Goreng Bimoli
+                          - generic [ref=f10e229]: "SKU: MGB - 2477 - 14"
+                        - generic [ref=f10e230]:
+                          - button "Kurangi jumlah Minyak Goreng Bimoli" [ref=f10e231]
+                          - generic [ref=f10e233]: "3"
+                          - button "Tambah jumlah Minyak Goreng Bimoli" [ref=f10e234]
+                      - generic [ref=f10e236]:
+                        - generic [ref=f10e237]:
+                          - generic [ref=f10e238]: Minyak Goreng Bimoli
+                          - generic [ref=f10e239]: "SKU: MGB - 2477 - 14"
+                        - generic [ref=f10e240]:
+                          - button "Kurangi jumlah Minyak Goreng Bimoli" [ref=f10e241]
+                          - generic [ref=f10e243]: "3"
+                          - button "Tambah jumlah Minyak Goreng Bimoli" [ref=f10e244]
+                  - generic [ref=f10e246]:
+                    - button "Batalkan" [ref=f10e247]
+                    - button "Simpan perubahan" [ref=f10e248]
+        - button "Buka chat Ari" [ref=f10e178]
+  - button "Open Next.js Dev Tools" [ref=f10e186] [cursor=pointer]
+  - alert [ref=f10e190]

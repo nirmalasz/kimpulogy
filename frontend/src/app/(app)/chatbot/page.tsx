@@ -43,8 +43,8 @@ export default function ChatbotPage() {
 
   return (
     <div className="flex flex-col gap-6">
-      <h1 className="text-3xl font-bold font-heading text-fg-default">
-        Chatbot AI
+      <h1 className="text-4xl font-bold font-heading text-fg-default">
+        Tanya Ari!
       </h1>
       <Card padded={false} className="flex h-[calc(100vh-220px)] min-h-[480px] flex-col">
         <div className="flex items-center gap-3 border-b border-fg-line p-6">

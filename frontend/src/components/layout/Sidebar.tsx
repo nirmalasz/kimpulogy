@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import { usePathname } from "next/navigation";
 import {
   BarChart3,
@@ -13,7 +14,6 @@ import {
 
 const navItems = [
   { href: "/dashboard", label: "Dashboard", icon: Home },
-  { href: "/overview", label: "Overview", icon: BarChart3 },
   { href: "/stock", label: "Stok", icon: Package },
   { href: "/finance", label: "Keuangan", icon: Wallet },
   { href: "/forecast", label: "Forecast", icon: BarChart3 },
@@ -25,12 +25,8 @@ export function Sidebar() {
 
   return (
     <aside className="flex w-[119px] shrink-0 flex-col items-center bg-primary-500 py-6 text-fg-text-contrast">
-      <Link
-        href="/"
-        className="mb-10 flex h-12 w-12 items-center justify-center rounded-full bg-secondary-400 text-lg font-bold"
-        aria-label="LARISIN"
-      >
-        L
+      <Link href="/" className="mb-10" aria-label="LARISIN">
+        <Image src="/logo-light.png" alt="LARISIN" width={48} height={48} priority />
       </Link>
       <nav className="flex flex-col gap-4">
         {navItems.map((item) => {

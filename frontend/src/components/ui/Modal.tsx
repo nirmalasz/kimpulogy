@@ -8,10 +8,19 @@ type ModalProps = {
   open: boolean;
   onClose: () => void;
   title?: string;
+  maxWidth?: string;
+  className?: string;
   children: ReactNode;
 };
 
-export function Modal({ open, onClose, title, children }: ModalProps) {
+export function Modal({
+  open,
+  onClose,
+  title,
+  maxWidth = "max-w-lg",
+  className = "",
+  children,
+}: ModalProps) {
   if (!open) return null;
 
   return (
@@ -25,7 +34,13 @@ export function Modal({ open, onClose, title, children }: ModalProps) {
         onClick={onClose}
         aria-hidden="true"
       />
-      <div className="relative w-full max-w-lg rounded-2xl bg-bg-default p-8 shadow-lg">
+      <div
+        className={[
+          "relative w-full rounded-2xl bg-bg-default p-8 shadow-lg",
+          maxWidth,
+          className,
+        ].join(" ")}
+      >
         <div className="mb-6 flex items-start justify-between gap-4">
           {title ? (
             <h2 className="text-xl font-bold font-heading text-fg-default">

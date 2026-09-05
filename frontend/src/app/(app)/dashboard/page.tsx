@@ -1,16 +1,12 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import {
-  Package,
-  ShoppingCart,
-  TrendingUp,
-  Wallet,
-  RefreshCw,
-} from "lucide-react";
+import { RefreshCw, ScanLine, TrendingUp } from "lucide-react";
 import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
-import { StatCard, type StatCardProps } from "@/components/ui/StatCard";
+import { SalesCompareChart } from "@/components/charts/SalesCompareChart";
+import { DonutChart } from "@/components/charts/DonutChart";
+import { QuickScanModal } from "@/components/modals/QuickScanModal";
 import {
   getDashboardMetrics,
   type DashboardMetrics,
@@ -20,10 +16,19 @@ function formatRupiah(value: number) {
   return "Rp " + Math.round(value).toLocaleString("id-ID");
 }
 
+// Fallback mock untuk tabel Barang/Terjual/Keuntungan — Hi-Fi dashboard
+const MOCK_TABLE = [
+  { barang: "Beras", terjual: 60, keuntungan: 100_000 },
+  { barang: "Minyak", terjual: 32, keuntungan: 72_000 },
+  { barang: "Gula", terjual: 32, keuntungan: 72_000 },
+  { barang: "Tepung", terjual: 32, keuntungan: 72_000 },
+];
+
 export default function DashboardPage() {
   const [metrics, setMetrics] = useState<DashboardMetrics | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [scanOpen, setScanOpen] = useState(false);
 
   const loadMetrics = async () => {
     setLoading(true);
@@ -42,139 +47,136 @@ export default function DashboardPage() {
     loadMetrics();
   }, []);
 
-  const stats: StatCardProps[] = metrics
-    ? [
-        {
-          icon: <ShoppingCart className="h-6 w-6" />,
-          label: "Total Pesanan",
-          value: String(metrics.total_orders),
-          trend: "+12%",
-        },
-        {
-          icon: <Wallet className="h-6 w-6" />,
-          label: "Total Omzet",
-          value: formatRupiah(metrics.total_omzet),
-          trend: "+8%",
-        },
-        {
-          icon: <Package className="h-6 w-6" />,
-          label: "Stok Menipis",
-          value: String(metrics.low_stock_count),
-          trend: metrics.low_stock_count > 0 ? "Perlu restock" : "Stok aman",
-          trendDirection: metrics.low_stock_count > 0 ? "down" : "up",
-        },
-      ]
-    : [];
+  const penjualanHariIni = metrics ? formatRupiah(metrics.today_income) : "Rp 666.000";
+  const totalTerjualHariIni = metrics ? String(metrics.products_sold) : "200";
+  const barangTop = MOCK_TABLE[0].barang;
 
   return (
     <div className="flex flex-col gap-6">
       <div className="flex flex-wrap items-center justify-between gap-4">
-        <div>
-          <h1 className="text-3xl font-bold font-heading text-fg-default">
-            Dashboard
-          </h1>
-          <p className="text-sm text-neutral-500">
-            Ringkasan omzet, pesanan warung, dan produk per hari ini
-          </p>
+        <h1 className="text-4xl font-bold font-heading text-fg-default">
+          Mau LARISIN apa hari ini?
+        </h1>
+        <div className="flex items-center gap-3">
+          <Button
+            variant="secondary"
+            onClick={loadMetrics}
+            title="Refresh Data"
+            aria-label="Refresh Data"
+          >
+            <RefreshCw className={`h-4 w-4 ${loading ? "animate-spin" : ""}`} />
+          </Button>
+          <Button
+            variant="tertiary"
+            onClick={() => setScanOpen(true)}
+          >
+            <ScanLine className="h-5 w-5" />
+            Quick Scan
+          </Button>
         </div>
-        <Button
-          variant="secondary"
-          onClick={loadMetrics}
-          title="Refresh Data"
-          aria-label="Refresh Data"
-        >
-          <RefreshCw className={`h-4 w-4 ${loading ? "animate-spin" : ""}`} />
-        </Button>
       </div>
 
       {error && (
         <div className="flex items-center justify-between rounded-xl bg-alert-bg p-4 text-sm text-alert-text">
-          <span>Backend belum aktif atau gagal dihubungi ({error}).</span>
+          <span>Backend belum aktif atau gagal dihubungi ({error}). Menampilkan data contoh.</span>
           <Button size="sm" variant="secondary" onClick={loadMetrics}>
             Coba Lagi
           </Button>
         </div>
       )}
 
-      <div className="grid gap-6 sm:grid-cols-2 xl:grid-cols-3">
-        {loading && !metrics
-          ? Array.from({ length: 3 }).map((_, i) => (
-              <Card key={i} className="animate-pulse h-28 bg-neutral-200/50" />
-            ))
-          : stats.map((stat) => (
-              <StatCard key={stat.label} {...stat} />
-            ))}
+      <div className="grid gap-6 md:grid-cols-3">
+        {[
+          { label: "Penjualan hari ini", value: penjualanHariIni, trend: "Naik 8%" },
+          { label: "Total Terjual Hari Ini", value: totalTerjualHariIni, trend: "Naik 8%" },
+          { label: "Barang Paling TOP", value: barangTop, trend: "Naik 8%" },
+        ].map((stat) => (
+          <div
+            key={stat.label}
+            className="flex flex-col gap-2 rounded-lg border-2 border-tertiary-500 bg-tertiary-100 p-4"
+          >
+            <span className="text-2xl font-bold font-heading text-fg-default">
+              {stat.label}
+            </span>
+            <span className="text-2xl font-bold font-heading text-secondary-600">
+              {loading && !metrics ? "…" : stat.value}
+            </span>
+            <span className="flex items-center gap-1 text-base text-black">
+              {stat.trend}
+              <TrendingUp className="h-5 w-5 text-fg-default" />
+            </span>
+          </div>
+        ))}
       </div>
 
-      <div className="grid gap-6 xl:grid-cols-2">
-        <Card className="flex flex-col gap-4">
-          <div className="flex items-center justify-between">
-            <h2 className="text-lg font-bold font-heading text-fg-default">
-              Pesanan Terbaru
-            </h2>
-            <TrendingUp className="h-5 w-5 text-primary-400" />
+      <div className="grid gap-6 xl:grid-cols-[minmax(0,5fr)_minmax(0,7fr)]">
+        <Card padded={false} className="overflow-hidden">
+          <div className="grid grid-cols-[minmax(0,2fr)_minmax(0,1fr)_minmax(0,2fr)] items-center bg-secondary-100 px-4 py-2 text-2xl font-bold font-heading text-fg-default">
+            <span>Barang</span>
+            <span>Terjual</span>
+            <span>Keuntungan</span>
           </div>
           <div className="flex flex-col">
-            {metrics?.recent_orders && metrics.recent_orders.length > 0 ? (
-              metrics.recent_orders.map((order, index) => (
-                <div
-                  key={order.id}
-                  className={[
-                    "flex items-center justify-between gap-4 py-3",
-                    index < metrics.recent_orders.length - 1
-                      ? "border-b border-fg-line"
-                      : "",
-                  ].join(" ")}
-                >
-                  <div className="flex flex-col">
-                    <span className="font-semibold text-fg-default">
-                      {order.item}
-                    </span>
-                    <span className="text-sm text-neutral-500">
-                      {order.id} · {order.qty} item
-                    </span>
-                  </div>
-                  <div className="flex items-center gap-4">
-                    <span className="font-semibold text-fg-default">
-                      {order.total}
-                    </span>
-                    <span
-                      className={[
-                        "rounded-full px-3 py-1 text-sm font-semibold",
-                        order.status === "Selesai"
-                          ? "bg-success-bg text-success-text"
-                          : order.status === "Diproses"
-                            ? "bg-info-bg text-info-text"
-                            : "bg-warning-bg text-warning-text",
-                      ].join(" ")}
-                    >
-                      {order.status}
-                    </span>
-                  </div>
-                </div>
-              ))
-            ) : (
-              <div className="py-6 text-center text-sm text-neutral-500">
-                Belum ada pesanan masuk
+            {MOCK_TABLE.map((row) => (
+              <div
+                key={row.barang}
+                className="grid grid-cols-[minmax(0,2fr)_minmax(0,1fr)_minmax(0,2fr)] items-center border-t border-secondary-600 px-4 py-2.5"
+              >
+                <span className="text-xl text-black">{row.barang}</span>
+                <span className="text-xl text-black">{row.terjual}</span>
+                <span className="text-xl text-black">
+                  {formatRupiah(row.keuntungan)}
+                </span>
               </div>
-            )}
+            ))}
           </div>
         </Card>
 
-        <Card className="flex flex-col gap-4">
-          <h2 className="text-lg font-bold font-heading text-fg-default">
-            Aktivitas Penjualan Warung
-          </h2>
-          <div className="flex flex-1 flex-col items-center justify-center rounded-xl bg-tertiary-100 p-8 text-center">
-            <div className="text-2xl font-bold font-heading text-fg-default">
-              {metrics ? `${metrics.products_sold} Porsi Terjual` : "0 Terjual"}
-            </div>
-            <p className="mt-2 text-sm text-fg-text max-w-sm">
-              Pesanan lancar dan perputaran kas tercatat secara real-time ke sistem kasir LARISIN.
-            </p>
-          </div>
+        <Card className="flex flex-col gap-4 rounded-xl bg-neutral-200">
+          <h2 className="text-lg font-semibold text-fg-default">Penjualan</h2>
+          <SalesCompareChart />
         </Card>
       </div>
+
+      <div className="grid gap-6 xl:grid-cols-[minmax(0,5fr)_minmax(0,7fr)]">
+        <Card className="flex flex-col gap-4 rounded-xl bg-neutral-200">
+          <h2 className="text-lg font-bold font-heading text-fg-default">
+            Penjualan Minggu Ini
+          </h2>
+          <DonutChart />
+        </Card>
+
+        <Card className="flex flex-col gap-2 rounded-xl bg-neutral-300 p-4 opacity-80">
+          <h2 className="text-2xl font-bold font-heading text-secondary-600">
+            Insights
+          </h2>
+          <p className="text-lg text-primary-300">
+            Ringkasan AI tentang performa warung kamu akan muncul di sini. Fitur
+            ini segera hadir bersama asisten LARISIN.
+          </p>
+        </Card>
+      </div>
+
+      <div className="grid gap-6 md:grid-cols-2">
+        <div className="flex flex-col gap-2 rounded-xl bg-primary-100 p-4">
+          <span className="text-2xl font-bold font-heading text-fg-default">
+            Stok Segera Habis!
+          </span>
+          <span className="text-4xl font-bold font-heading text-secondary-600">
+            Minyak
+          </span>
+        </div>
+        <div className="flex flex-col gap-2 rounded-xl bg-primary-100 p-4">
+          <span className="text-2xl font-bold font-heading text-fg-default">
+            Stok Segera Expired!
+          </span>
+          <span className="text-4xl font-bold font-heading text-secondary-600">
+            Sirup
+          </span>
+        </div>
+      </div>
+
+      <QuickScanModal open={scanOpen} onClose={() => setScanOpen(false)} />
     </div>
   );
 }

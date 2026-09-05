@@ -5,6 +5,7 @@ import { useState } from "react";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { PublicNavbar } from "@/components/layout/PublicNavbar";
+import { SignupIllustration } from "@/components/illustrations/Illustrations";
 
 type FormValues = {
   namaWarung: string;
@@ -64,51 +65,54 @@ export default function SignupPage() {
   return (
     <div className="flex flex-1 flex-col">
       <PublicNavbar />
-      <main className="mx-auto flex w-full max-w-[1440px] flex-1 items-center justify-center px-6 py-16">
-        <section className="w-full max-w-[680px]">
-          <div className="mb-10 flex flex-col gap-2">
-            <h1 className="text-4xl font-bold font-heading text-fg-default">
-              Ayo buat akun!
-            </h1>
-            <p className="text-lg text-fg-text">
-              Lengkapi informasi berikut untuk melanjutkan
-            </p>
-          </div>
-          <form onSubmit={handleSubmit} className="flex flex-col gap-6">
-            <Input
-              name="namaWarung"
-              label="Nama Warung"
-              placeholder="Masukkan nama warung"
-              value={values.namaWarung}
-              onChange={handleChange("namaWarung")}
-              error={errors.namaWarung}
-              autoComplete="organization"
-            />
-            <Input
-              name="email"
-              type="email"
-              label="Email"
-              placeholder="Masukkan email"
-              value={values.email}
-              onChange={handleChange("email")}
-              error={errors.email}
-              autoComplete="email"
-            />
-            <Input
-              name="password"
-              type="password"
-              label="Password"
-              placeholder="Masukkan password"
-              value={values.password}
-              onChange={handleChange("password")}
-              error={errors.password}
-              autoComplete="new-password"
-            />
-            <Button type="submit" size="lg" fullWidth>
-              Daftarkan akun
-            </Button>
-          </form>
-        </section>
+      <main className="mx-auto flex w-full max-w-[1440px] flex-1 items-center px-6 py-16">
+        <div className="grid w-full items-center gap-12 lg:grid-cols-2">
+          <section className="w-full max-w-[680px]">
+            <div className="mb-10 flex flex-col gap-2">
+              <h1 className="text-4xl font-bold font-heading text-fg-default">
+                Ayo buat akun!
+              </h1>
+              <p className="text-lg text-fg-text">
+                Lengkapi informasi berikut untuk melanjutkan
+              </p>
+            </div>
+            <form onSubmit={handleSubmit} className="flex flex-col gap-6">
+              <Input
+                name="namaWarung"
+                label="Nama Warung"
+                placeholder="Masukkan nama warung"
+                value={values.namaWarung}
+                onChange={handleChange("namaWarung")}
+                error={errors.namaWarung}
+                autoComplete="organization"
+              />
+              <Input
+                name="email"
+                type="email"
+                label="Email"
+                placeholder="Masukkan email"
+                value={values.email}
+                onChange={handleChange("email")}
+                error={errors.email}
+                autoComplete="email"
+              />
+              <Input
+                name="password"
+                type="password"
+                label="Password"
+                placeholder="Masukkan password"
+                value={values.password}
+                onChange={handleChange("password")}
+                error={errors.password}
+                autoComplete="new-password"
+              />
+              <Button type="submit" size="lg" fullWidth>
+                Daftarkan akun
+              </Button>
+            </form>
+          </section>
+          <SignupIllustration className="hidden lg:block" />
+        </div>
       </main>
     </div>
   );

@@ -1,11 +1,15 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Plus, Receipt, TrendingDown, TrendingUp, Wallet, RefreshCw } from "lucide-react";
-import { Badge } from "@/components/ui/Badge";
+import {
+  Plus,
+  RefreshCw,
+  TrendingDown,
+  TrendingUp,
+} from "lucide-react";
 import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
-import { StatCard, type StatCardProps } from "@/components/ui/StatCard";
+import { DonutChart } from "@/components/charts/DonutChart";
 import { AddTransactionModal } from "@/components/modals/AddTransactionModal";
 import {
   getFinanceSummary,
@@ -19,6 +23,15 @@ import {
 function formatRupiah(value: number) {
   return "Rp " + Math.round(value).toLocaleString("id-ID");
 }
+
+// Fallback mock untuk komponen laba rugi — Hi-Fi finance
+const MOCK_COMPONENTS = [
+  { label: "Total Pemasukan (Omset)", value: "18.000.000" },
+  { label: "Harga Pokok Penjualan (HPP)", value: "-8.000.000" },
+  { label: "Laba Kotor (Gross Profit)", value: "10.000.000" },
+  { label: "Biaya Operasional (Listrik, karyawan)", value: "-5.200.000" },
+  { label: "Laba Bersih (Nett profit)", value: "4.800.000" },
+];
 
 export default function FinancePage() {
   const [summary, setSummary] = useState<FinanceSummary | null>(null);
@@ -53,45 +66,101 @@ export default function FinancePage() {
     await loadData();
   };
 
-  const financeStats: StatCardProps[] = summary
+  const kpiCards = summary
     ? [
         {
-          icon: <Wallet className="h-6 w-6" />,
-          label: "Pemasukan",
-          value: formatRupiah(summary.total_income),
-          trend: summary.income_trend,
-        },
-        {
-          icon: <Receipt className="h-6 w-6" />,
-          label: "Pengeluaran",
+          label: "Total Pengeluaran",
           value: formatRupiah(summary.total_expense),
           trend: summary.expense_trend,
-          trendDirection: "down",
+          trendDown: true,
         },
         {
-          icon: <TrendingUp className="h-6 w-6" />,
-          label: "Omzet",
+          label: "Gross Margin",
           value: formatRupiah(summary.total_revenue),
           trend: summary.revenue_trend,
         },
         {
-          icon: <TrendingDown className="h-6 w-6" />,
-          label: "Laba Bersih",
+          label: "Keuntungan Kotor",
+          value: `${
+            summary.total_revenue > 0
+              ? Math.round((summary.net_profit / summary.total_revenue) * 100)
+              : 0
+          }%`,
+          trend: summary.profit_trend,
+        },
+        {
+          label: "Nett Profit",
           value: formatRupiah(summary.net_profit),
           trend: summary.profit_trend,
         },
       ]
-    : [];
+    : [
+        { label: "Total Pengeluaran", value: "Rp 8.000.000", trend: "Naik 8%", trendDown: true },
+        { label: "Gross Margin", value: "Rp 10.000.000", trend: "Naik 8%" },
+        { label: "Keuntungan Kotor", value: "30%", trend: "Naik 8%" },
+        { label: "Nett Profit", value: "Rp 6.000.000", trend: "Naik 8%" },
+      ];
+
+  const masuk = transactions.filter((tx) => tx.type === "Masuk");
+  const keluar = transactions.filter((tx) => tx.type === "Keluar");
+
+  const renderHistory = (rows: Transaction[], accent: "income" | "expense") => (
+    <div className="flex flex-col">
+      {rows.length === 0 ? (
+        <p className="py-6 text-center text-sm text-neutral-500">
+          Belum ada transaksi tercatat
+        </p>
+      ) : (
+        rows.map((tx, index) => (
+          <div
+            key={tx.id || index}
+            className="flex items-center justify-between gap-4 py-3"
+          >
+            <div className="flex min-w-0 items-center gap-3">
+              <span
+                className={[
+                  "flex h-10 w-10 shrink-0 items-center justify-center rounded-lg",
+                  accent === "income"
+                    ? "bg-success-bg text-success-text"
+                    : "bg-alert-bg text-alert-text",
+                ].join(" ")}
+              >
+                {accent === "income" ? (
+                  <TrendingUp className="h-5 w-5" />
+                ) : (
+                  <TrendingDown className="h-5 w-5" />
+                )}
+              </span>
+              <div className="flex min-w-0 flex-col">
+                <span className="truncate text-sm font-semibold text-fg-default">
+                  {tx.desc}
+                </span>
+                <span className="text-xs text-neutral-500">{tx.date}</span>
+              </div>
+            </div>
+            <span
+              className={[
+                "shrink-0 text-sm font-bold",
+                accent === "income" ? "text-success-text" : "text-alert-text",
+              ].join(" ")}
+            >
+              {accent === "income" ? "+" : "-"} {formatRupiah(tx.amount)}
+            </span>
+          </div>
+        ))
+      )}
+    </div>
+  );
 
   return (
     <div className="flex flex-col gap-6">
       <div className="flex flex-wrap items-center justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold font-heading text-fg-default">
+          <h1 className="text-4xl font-bold font-heading text-fg-default">
             Keuangan
           </h1>
-          <p className="text-sm text-neutral-500">
-            Pencatatan uang kas warung real-time terhubung ke backend Go
+          <p className="text-base text-neutral-500">
+            Ringkasan transaksi dan performa warung
           </p>
         </div>
         <div className="flex items-center gap-3">
@@ -120,131 +189,101 @@ export default function FinancePage() {
       )}
 
       <div className="grid gap-6 sm:grid-cols-2 xl:grid-cols-4">
-        {loading && !summary
-          ? Array.from({ length: 4 }).map((_, i) => (
-              <Card key={i} className="animate-pulse h-28 bg-neutral-200/50" />
-            ))
-          : financeStats.map((stat) => (
-              <StatCard key={stat.label} {...stat} />
-            ))}
+        {kpiCards.map((stat) => (
+          <div
+            key={stat.label}
+            className="flex flex-col gap-2 rounded-lg border-2 border-tertiary-500 bg-tertiary-100 p-4"
+          >
+            <span className="text-2xl font-bold font-heading text-fg-default">
+              {stat.label}
+            </span>
+            <span className="text-2xl font-bold font-heading text-secondary-600">
+              {stat.value}
+            </span>
+            <span className="flex items-center gap-1 text-base text-black">
+              {stat.trend}
+              {stat.trendDown ? (
+                <TrendingDown className="h-5 w-5 text-fg-default" />
+              ) : (
+                <TrendingUp className="h-5 w-5 text-fg-default" />
+              )}
+            </span>
+          </div>
+        ))}
       </div>
 
       <div className="grid gap-6 xl:grid-cols-2">
-        <Card className="flex flex-col gap-4">
+        <Card className="flex flex-col gap-2">
           <h2 className="text-lg font-bold font-heading text-fg-default">
-            Arus Kas Pemasukan & Pengeluaran
+            Riwayat Pemasukan
           </h2>
-          <div className="flex flex-col justify-center gap-3 rounded-xl bg-bg-subtle p-6 border border-fg-line">
-            <div className="flex justify-between items-center text-sm font-semibold">
-              <span className="text-fg-text">Pemasukan (Masuk)</span>
-              <span className="text-success-text">{formatRupiah(summary?.total_income || 0)}</span>
-            </div>
-            <div className="h-3 w-full bg-neutral-200 rounded-full overflow-hidden flex">
-              <div
-                className="bg-success-solid h-full transition-all duration-500"
-                style={{
-                  width: `${
-                    summary && summary.total_income + summary.total_expense > 0
-                      ? (summary.total_income / (summary.total_income + summary.total_expense)) * 100
-                      : 50
-                  }%`,
-                }}
-              />
-              <div
-                className="bg-alert-solid h-full transition-all duration-500"
-                style={{
-                  width: `${
-                    summary && summary.total_income + summary.total_expense > 0
-                      ? (summary.total_expense / (summary.total_income + summary.total_expense)) * 100
-                      : 50
-                  }%`,
-                }}
-              />
-            </div>
-            <div className="flex justify-between items-center text-sm font-semibold">
-              <span className="text-fg-text">Pengeluaran (Keluar)</span>
-              <span className="text-alert-text">{formatRupiah(summary?.total_expense || 0)}</span>
-            </div>
-          </div>
+          {renderHistory(masuk, "income")}
         </Card>
-
-        <Card className="flex flex-col gap-4">
+        <Card className="flex flex-col gap-2">
           <h2 className="text-lg font-bold font-heading text-fg-default">
-            Efisiensi Margin Keuntungan
+            Riwayat Pengeluaran
           </h2>
-          <div className="flex flex-1 flex-col items-center justify-center rounded-xl bg-tertiary-100 p-6 text-center">
-            <span className="text-3xl font-extrabold font-heading text-primary-500">
-              {summary && summary.total_revenue > 0
-                ? `${Math.round((summary.net_profit / summary.total_revenue) * 100)}%`
-                : "0%"}
-            </span>
-            <span className="mt-1 text-sm font-medium text-fg-text">
-              Margin Laba Bersih terhadap Omzet
-            </span>
-            <span className="mt-2 text-xs text-neutral-500">
-              {summary && summary.net_profit >= 0
-                ? "Keuangan warung sehat dan surplus kas."
-                : "Perhatikan pengeluaran operasional agar tidak defisit."}
-            </span>
-          </div>
+          {renderHistory(keluar, "expense")}
         </Card>
       </div>
 
-      <Card className="flex flex-col gap-4">
-        <div className="flex items-center justify-between">
-          <h2 className="text-lg font-bold font-heading text-fg-default">
-            Riwayat Transaksi Kas
-          </h2>
-          <span className="text-xs text-neutral-500">
-            Total {transactions.length} pencatatan
-          </span>
-        </div>
-
-        <div className="flex flex-col">
-          <div className="grid grid-cols-[1.2fr_2fr_1.2fr_1fr] gap-4 border-b border-fg-line py-3 text-sm font-semibold text-neutral-500">
-            <span>Tanggal</span>
-            <span>Keterangan</span>
-            <span>Jenis & Kategori</span>
-            <span className="text-right">Jumlah</span>
+      <div className="grid gap-6 xl:grid-cols-2">
+        <Card padded={false} className="overflow-hidden">
+          <div className="flex items-center justify-between px-4 py-3">
+            <span className="text-lg font-bold font-heading text-fg-default">
+              Komponen
+            </span>
+            <span className="text-lg font-bold font-heading text-fg-default">
+              Jumlah (IDR)
+            </span>
           </div>
-          {transactions.length === 0 ? (
-            <div className="py-8 text-center text-neutral-500 text-sm">
-              Belum ada transaksi tercatat. Klik "Catat Transaksi" untuk menambahkan.
-            </div>
-          ) : (
-            transactions.map((tx, index) => (
+          <div className="flex flex-col">
+            {MOCK_COMPONENTS.map((row, index) => (
               <div
-                key={tx.id || index}
+                key={row.label}
                 className={[
-                  "grid grid-cols-[1.2fr_2fr_1.2fr_1fr] items-center gap-4 py-4",
-                  index < transactions.length - 1 ? "border-b border-fg-line" : "",
+                  "flex items-center justify-between gap-4 px-4 py-2.5",
+                  index < MOCK_COMPONENTS.length - 1
+                    ? "border-b border-fg-line"
+                    : "",
+                  row.label.startsWith("Laba Bersih")
+                    ? "bg-secondary-100 font-bold"
+                    : "",
                 ].join(" ")}
               >
-                <span className="text-fg-text text-sm">{tx.date}</span>
-                <div className="flex flex-col">
-                  <span className="font-semibold text-fg-default">{tx.desc}</span>
-                  {tx.category && (
-                    <span className="text-xs text-neutral-500">{tx.category}</span>
-                  )}
-                </div>
-                <div>
-                  <Badge tone={tx.type === "Masuk" ? "success" : "alert"}>
-                    {tx.type}
-                  </Badge>
-                </div>
                 <span
                   className={[
-                    "text-right font-bold",
-                    tx.type === "Masuk" ? "text-success-text" : "text-alert-text",
+                    "text-base",
+                    row.label.startsWith("Laba Bersih")
+                      ? "font-bold font-heading text-fg-default"
+                      : "text-fg-default",
                   ].join(" ")}
                 >
-                  {tx.type === "Masuk" ? "+" : "-"} {formatRupiah(tx.amount)}
+                  {row.label}
+                </span>
+                <span
+                  className={[
+                    "text-base",
+                    row.value.startsWith("-")
+                      ? "text-alert-text"
+                      : "text-fg-default",
+                    row.label.startsWith("Laba Bersih") ? "font-bold" : "",
+                  ].join(" ")}
+                >
+                  {row.value}
                 </span>
               </div>
-            ))
-          )}
-        </div>
-      </Card>
+            ))}
+          </div>
+        </Card>
+
+        <Card className="flex flex-col gap-4 rounded-xl bg-neutral-200">
+          <h2 className="text-lg font-bold font-heading text-fg-default">
+            Minggu Ini
+          </h2>
+          <DonutChart />
+        </Card>
+      </div>
 
       <AddTransactionModal
         open={modalOpen}

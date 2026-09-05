@@ -41,6 +41,25 @@ func createTables(db *sql.DB) error {
 			created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
 			updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
 		);`,
+		`CREATE TABLE IF NOT EXISTS sales (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            product_id INTEGER,
+            buyer_name TEXT,
+            quantity REAL NOT NULL,
+            unit_price REAL NOT NULL,
+            total_nominal REAL NOT NULL,
+            sale_date TEXT NOT NULL,
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (product_id) REFERENCES products(id)
+        );`,
+		`CREATE TABLE IF NOT EXISTS purchases (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            product_id INTEGER,
+            quantity REAL NOT NULL,
+            purchase_date TEXT NOT NULL,
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (product_id) REFERENCES products(id)
+        );`,
 		`CREATE TABLE IF NOT EXISTS transactions (
 			id INTEGER PRIMARY KEY AUTOINCREMENT,
 			type TEXT NOT NULL, -- 'Masuk' or 'Keluar'
