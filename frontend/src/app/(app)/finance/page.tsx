@@ -13,9 +13,11 @@ import { DonutChart } from "@/components/charts/DonutChart";
 import { AddTransactionModal } from "@/components/modals/AddTransactionModal";
 import {
   getFinanceSummary,
+  getFinanceComponents,
   getTransactions,
   createTransaction,
   type FinanceSummary,
+  type FinanceComponent,
   type Transaction,
   type CreateTransactionPayload,
 } from "@/services/api";
@@ -24,17 +26,14 @@ function formatRupiah(value: number) {
   return "Rp " + Math.round(value).toLocaleString("id-ID");
 }
 
-// Fallback mock untuk komponen laba rugi — Hi-Fi finance
-const MOCK_COMPONENTS = [
-  { label: "Total Pemasukan (Omset)", value: "18.000.000" },
-  { label: "Harga Pokok Penjualan (HPP)", value: "-8.000.000" },
-  { label: "Laba Kotor (Gross Profit)", value: "10.000.000" },
-  { label: "Biaya Operasional (Listrik, karyawan)", value: "-5.200.000" },
-  { label: "Laba Bersih (Nett profit)", value: "4.800.000" },
-];
+function formatComponent(value: number) {
+  const sign = value < 0 ? "-" : "";
+  return sign + Math.abs(Math.round(value)).toLocaleString("id-ID");
+}
 
 export default function FinancePage() {
   const [summary, setSummary] = useState<FinanceSummary | null>(null);
+  const [components, setComponents] = useState<FinanceComponent[]>([]);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [loading, setLoading] = useState(true);
   const [modalOpen, setModalOpen] = useState(false);
@@ -44,11 +43,13 @@ export default function FinancePage() {
     setLoading(true);
     setError(null);
     try {
-      const [sumData, txData] = await Promise.all([
+      const [sumData, compData, txData] = await Promise.all([
         getFinanceSummary(),
+        getFinanceComponents(),
         getTransactions(),
       ]);
       setSummary(sumData);
+      setComponents(compData.rows);
       setTransactions(txData);
     } catch (err: any) {
       setError(err?.message || "Gagal memuat data dari server");
@@ -238,17 +239,19 @@ export default function FinancePage() {
             </span>
           </div>
           <div className="flex flex-col">
-            {MOCK_COMPONENTS.map((row, index) => (
+            {(components.length > 0 ? components : [
+              { label: "Total Pemasukan (Omset)", value: 18_000_000 },
+              { label: "Harga Pokok Penjualan (HPP)", value: -8_000_000 },
+              { label: "Laba Kotor (Gross Profit)", value: 10_000_000 },
+              { label: "Biaya Operasional (Listrik, karyawan)", value: -5_200_000 },
+              { label: "Laba Bersih (Nett profit)", value: 4_800_000 },
+            ]).map((row, index) => (
               <div
                 key={row.label}
                 className={[
                   "flex items-center justify-between gap-4 px-4 py-2.5",
-                  index < MOCK_COMPONENTS.length - 1
-                    ? "border-b border-fg-line"
-                    : "",
-                  row.label.startsWith("Laba Bersih")
-                    ? "bg-secondary-100 font-bold"
-                    : "",
+                  index < (components.length || 5) - 1 ? "border-b border-fg-line" : "",
+                  row.label.startsWith("Laba Bersih") ? "bg-secondary-100 font-bold" : "",
                 ].join(" ")}
               >
                 <span
@@ -264,13 +267,11 @@ export default function FinancePage() {
                 <span
                   className={[
                     "text-base",
-                    row.value.startsWith("-")
-                      ? "text-alert-text"
-                      : "text-fg-default",
+                    row.value < 0 ? "text-alert-text" : "text-fg-default",
                     row.label.startsWith("Laba Bersih") ? "font-bold" : "",
                   ].join(" ")}
                 >
-                  {row.value}
+                  {formatComponent(row.value)}
                 </span>
               </div>
             ))}

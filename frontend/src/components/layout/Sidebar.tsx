@@ -2,7 +2,8 @@
 
 import Link from "next/link";
 import Image from "next/image";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
+import { useAuth } from "@/components/auth/AuthProvider";
 import {
   BarChart3,
   Home,
@@ -22,6 +23,13 @@ const navItems = [
 
 export function Sidebar() {
   const pathname = usePathname();
+  const router = useRouter();
+  const { logout } = useAuth();
+
+  const handleLogout = () => {
+    logout();
+    router.replace("/signup");
+  };
 
   return (
     <aside className="flex w-[119px] shrink-0 flex-col items-center bg-primary-500 py-6 text-fg-text-contrast">
@@ -51,14 +59,15 @@ export function Sidebar() {
           );
         })}
       </nav>
-      <Link
-        href="/"
+      <button
+        type="button"
+        onClick={handleLogout}
         className="mt-auto flex h-14 w-14 items-center justify-center rounded-xl text-fg-text-contrast/70 transition-colors hover:bg-fg-text-contrast/10"
         title="Keluar"
         aria-label="Keluar"
       >
         <LogOut className="h-6 w-6" />
-      </Link>
+      </button>
     </aside>
   );
 }

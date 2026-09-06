@@ -1,7 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import { Bell, Search } from "lucide-react";
+import { Bell, LogOut, Search } from "lucide-react";
+import { useAuth } from "@/components/auth/AuthProvider";
 
 type Notification = {
   id: number;
@@ -38,6 +39,7 @@ const MOCK_NOTIFICATIONS: Notification[] = [
 ];
 
 export function Topbar() {
+  const { user, shop, logout } = useAuth();
   const [notifOpen, setNotifOpen] = useState(false);
 
   return (
@@ -107,12 +109,24 @@ export function Topbar() {
 
           <div className="flex items-center gap-3">
             <span className="flex h-12 w-12 items-center justify-center rounded-full bg-secondary-300 text-lg font-bold text-primary-500">
-              Z
+              {(user?.name || "Z").charAt(0).toUpperCase()}
             </span>
             <div className="hidden flex-col leading-tight sm:flex">
-              <span className="font-semibold text-fg-default">Zafran</span>
-              <span className="text-sm text-neutral-500">Warung Mama Zafran</span>
+              <span className="font-semibold text-fg-default">
+                {user?.name || "Zafran"}
+              </span>
+              <span className="text-sm text-neutral-500">
+                {shop?.name || "Warung Mama Zafran"}
+              </span>
             </div>
+            <button
+              type="button"
+              onClick={logout}
+              aria-label="Keluar"
+              className="flex h-10 w-10 items-center justify-center rounded-lg text-fg-text transition-colors hover:bg-neutral-100"
+            >
+              <LogOut className="h-5 w-5" />
+            </button>
           </div>
         </div>
       </div>

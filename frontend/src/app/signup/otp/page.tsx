@@ -5,15 +5,18 @@ import { useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/Button";
 import { PublicNavbar } from "@/components/layout/PublicNavbar";
 import { OtpIllustration } from "@/components/illustrations/Illustrations";
+import { useAuth } from "@/components/auth/AuthProvider";
 
 const OTP_LENGTH = 5;
 const RESEND_SECONDS = 58;
 
 export default function OtpPage() {
   const router = useRouter();
+  const { register } = useAuth();
   const [otp, setOtp] = useState<string[]>(Array(OTP_LENGTH).fill(""));
   const [seconds, setSeconds] = useState(RESEND_SECONDS);
   const [error, setError] = useState<string>();
+  const [submitting, setSubmitting] = useState(false);
   const inputsRef = useRef<Array<HTMLInputElement | null>>([]);
 
   useEffect(() => {
@@ -73,13 +76,27 @@ export default function OtpPage() {
     setError(undefined);
   };
 
-  const handleVerify = (e: React.FormEvent) => {
+  const handleVerify = async (e: React.FormEvent) => {
     e.preventDefault();
     if (otp.some((d) => !d)) {
       setError("Isi semua digit kode verifikasi");
       return;
     }
-    router.push("/signup/success");
+    setSubmitting(true);
+    setError(undefined);
+    try {
+      const signup = JSON.parse(sessionStorage.getItem("larixin-signup") ?? "{}");
+      await register({
+        name: signup.namaWarung || "Warung",
+        phone: signup.email || "",
+        password: signup.password || "",
+        shop_name: signup.namaWarung,
+      });
+      router.push("/signup/success");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Gagal mendaftarkan akun, coba lagi");
+      setSubmitting(false);
+    }
   };
 
   return (
@@ -130,8 +147,8 @@ export default function OtpPage() {
             {error ? (
               <p className="text-center text-sm text-alert-text">{error}</p>
             ) : null}
-            <Button type="submit" size="lg" fullWidth>
-              Verifikasi Kode
+            <Button type="submit" size="lg" fullWidth disabled={submitting}>
+              {submitting ? "Memverifikasi..." : "Verifikasi Kode"}
             </Button>
             <p className="text-center text-sm text-fg-text">
               {seconds > 0 ? (

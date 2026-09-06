@@ -4,6 +4,7 @@ import { useState } from "react";
 import { Minus, Plus } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { Modal } from "@/components/ui/Modal";
+import { getProductBySKU } from "@/services/api";
 
 type ScannedItem = {
   id: number;
@@ -12,11 +13,7 @@ type ScannedItem = {
   qty: number;
 };
 
-const MOCK_SCANNED: ScannedItem[] = [
-  { id: 1, name: "Minyak Goreng Bimoli", sku: "MGB - 2477 - 14", qty: 3 },
-  { id: 2, name: "Minyak Goreng Bimoli", sku: "MGB - 2477 - 14", qty: 3 },
-  { id: 3, name: "Minyak Goreng Bimoli", sku: "MGB - 2477 - 14", qty: 3 },
-];
+const MOCK_SCANNED: ScannedItem[] = [];
 
 type QuickScanModalProps = {
   open: boolean;
@@ -26,6 +23,8 @@ type QuickScanModalProps = {
 export function QuickScanModal({ open, onClose }: QuickScanModalProps) {
   const [items, setItems] = useState<ScannedItem[]>(MOCK_SCANNED);
   const [sku, setSku] = useState("");
+  const [lookupError, setLookupError] = useState<string | null>(null);
+  const [searching, setSearching] = useState(false);
 
   const adjustQty = (id: number, delta: number) => {
     setItems((prev) =>
@@ -39,15 +38,38 @@ export function QuickScanModal({ open, onClose }: QuickScanModalProps) {
 
   const clearAll = () => setItems([]);
 
-  const handleManualAdd = (e: React.FormEvent) => {
+  const handleManualAdd = async (e: React.FormEvent) => {
     e.preventDefault();
     const trimmed = sku.trim();
     if (!trimmed) return;
-    setItems((prev) => [
-      ...prev,
-      { id: Date.now(), name: "Produk Manual", sku: trimmed, qty: 1 },
-    ]);
-    setSku("");
+    setSearching(true);
+    setLookupError(null);
+    try {
+      const product = await getProductBySKU(trimmed);
+      const existing = items.find((i) => i.sku === product.sku);
+      if (existing) {
+        setItems((prev) =>
+          prev.map((i) =>
+            i.id === existing.id ? { ...i, qty: i.qty + 1 } : i
+          )
+        );
+      } else {
+        setItems((prev) => [
+          ...prev,
+          {
+            id: Date.now(),
+            name: product.name,
+            sku: product.sku || trimmed,
+            qty: 1,
+          },
+        ]);
+      }
+      setSku("");
+    } catch (err) {
+      setLookupError(err instanceof Error ? err.message : "Produk tidak ditemukan");
+    } finally {
+      setSearching(false);
+    }
   };
 
   return (
@@ -74,13 +96,19 @@ export function QuickScanModal({ open, onClose }: QuickScanModalProps) {
               </span>
               <input
                 value={sku}
-                onChange={(e) => setSku(e.target.value)}
+                onChange={(e) => {
+                  setSku(e.target.value);
+                  setLookupError(null);
+                }}
                 placeholder="Masukkan SKU"
                 className="h-11 w-full rounded-lg border border-neutral-400 bg-bg-default px-3 text-sm text-fg-default placeholder:text-neutral-500 focus:border-primary-300 focus:outline-none"
               />
+              {lookupError ? (
+                <p className="text-sm text-alert-text">{lookupError}</p>
+              ) : null}
             </div>
-            <Button type="submit" size="md" className="shrink-0">
-              Masukkan
+            <Button type="submit" size="md" className="shrink-0" disabled={searching}>
+              {searching ? "Cari..." : "Masukkan"}
             </Button>
           </form>
         </div>

@@ -49,7 +49,7 @@ kind: Service
 metadata:
   name: larisin-backend-svc
 spec:
-  type: LoadBalancer
+  type: ClusterIP
   selector:
     app: larisin-backend
   ports:

@@ -5,37 +5,31 @@ import { RefreshCw, ScanLine, TrendingUp } from "lucide-react";
 import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { SalesCompareChart } from "@/components/charts/SalesCompareChart";
-import { DonutChart } from "@/components/charts/DonutChart";
+import { DonutChart, type DonutSlice } from "@/components/charts/DonutChart";
 import { QuickScanModal } from "@/components/modals/QuickScanModal";
 import {
-  getDashboardMetrics,
-  type DashboardMetrics,
+  getDashboardAnalytics,
+  type DashboardAnalytics,
 } from "@/services/api";
 
 function formatRupiah(value: number) {
   return "Rp " + Math.round(value).toLocaleString("id-ID");
 }
 
-// Fallback mock untuk tabel Barang/Terjual/Keuntungan — Hi-Fi dashboard
-const MOCK_TABLE = [
-  { barang: "Beras", terjual: 60, keuntungan: 100_000 },
-  { barang: "Minyak", terjual: 32, keuntungan: 72_000 },
-  { barang: "Gula", terjual: 32, keuntungan: 72_000 },
-  { barang: "Tepung", terjual: 32, keuntungan: 72_000 },
-];
+const MIX_COLORS = ["#EA6C0C", "#FBA33C", "#354973", "#A1BD25", "#7F90BB", "#F98613", "#3D568F"];
 
 export default function DashboardPage() {
-  const [metrics, setMetrics] = useState<DashboardMetrics | null>(null);
+  const [analytics, setAnalytics] = useState<DashboardAnalytics | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [scanOpen, setScanOpen] = useState(false);
 
-  const loadMetrics = async () => {
+  const loadAnalytics = async () => {
     setLoading(true);
     setError(null);
     try {
-      const data = await getDashboardMetrics();
-      setMetrics(data);
+      const data = await getDashboardAnalytics();
+      setAnalytics(data);
     } catch (err: any) {
       setError(err?.message || "Gagal memuat metrics");
     } finally {
@@ -44,12 +38,23 @@ export default function DashboardPage() {
   };
 
   useEffect(() => {
-    loadMetrics();
+    loadAnalytics();
   }, []);
 
-  const penjualanHariIni = metrics ? formatRupiah(metrics.today_income) : "Rp 666.000";
-  const totalTerjualHariIni = metrics ? String(metrics.products_sold) : "200";
-  const barangTop = MOCK_TABLE[0].barang;
+  const donutSlices: DonutSlice[] = (analytics?.weekly_mix || []).map((item, i) => ({
+    label: item.label,
+    value: item.value,
+    color: MIX_COLORS[i % MIX_COLORS.length],
+  }));
+
+  const penjualanHariIni = analytics ? formatRupiah(analytics.today_income) : "Rp 666.000";
+  const totalTerjualHariIni = analytics
+    ? String(Math.round(analytics.this_week.reduce((sum, p) => sum + p.qty, 0)))
+    : "200";
+  const barangTop = analytics?.top_products?.[0]?.name || "Beras";
+
+  const lowStock = analytics?.reminders.filter((r) => r.type === "low_stock") || [];
+  const expiring = analytics?.reminders.filter((r) => r.type === "expiring") || [];
 
   return (
     <div className="flex flex-col gap-6">
@@ -60,16 +65,13 @@ export default function DashboardPage() {
         <div className="flex items-center gap-3">
           <Button
             variant="secondary"
-            onClick={loadMetrics}
+            onClick={loadAnalytics}
             title="Refresh Data"
             aria-label="Refresh Data"
           >
             <RefreshCw className={`h-4 w-4 ${loading ? "animate-spin" : ""}`} />
           </Button>
-          <Button
-            variant="tertiary"
-            onClick={() => setScanOpen(true)}
-          >
+          <Button variant="tertiary" onClick={() => setScanOpen(true)}>
             <ScanLine className="h-5 w-5" />
             Quick Scan
           </Button>
@@ -79,7 +81,7 @@ export default function DashboardPage() {
       {error && (
         <div className="flex items-center justify-between rounded-xl bg-alert-bg p-4 text-sm text-alert-text">
           <span>Backend belum aktif atau gagal dihubungi ({error}). Menampilkan data contoh.</span>
-          <Button size="sm" variant="secondary" onClick={loadMetrics}>
+          <Button size="sm" variant="secondary" onClick={loadAnalytics}>
             Coba Lagi
           </Button>
         </div>
@@ -99,7 +101,7 @@ export default function DashboardPage() {
               {stat.label}
             </span>
             <span className="text-2xl font-bold font-heading text-secondary-600">
-              {loading && !metrics ? "…" : stat.value}
+              {loading && !analytics ? "…" : stat.value}
             </span>
             <span className="flex items-center gap-1 text-base text-black">
               {stat.trend}
@@ -117,15 +119,20 @@ export default function DashboardPage() {
             <span>Keuntungan</span>
           </div>
           <div className="flex flex-col">
-            {MOCK_TABLE.map((row) => (
+            {(analytics?.top_products || [
+              { name: "Beras", qty: 60, profit: 100_000, profit_str: "Rp 100.000" },
+              { name: "Minyak", qty: 32, profit: 72_000, profit_str: "Rp 72.000" },
+              { name: "Gula", qty: 32, profit: 72_000, profit_str: "Rp 72.000" },
+              { name: "Tepung", qty: 32, profit: 72_000, profit_str: "Rp 72.000" },
+            ]).map((row) => (
               <div
-                key={row.barang}
+                key={row.name}
                 className="grid grid-cols-[minmax(0,2fr)_minmax(0,1fr)_minmax(0,2fr)] items-center border-t border-secondary-600 px-4 py-2.5"
               >
-                <span className="text-xl text-black">{row.barang}</span>
-                <span className="text-xl text-black">{row.terjual}</span>
+                <span className="text-xl text-black">{row.name}</span>
+                <span className="text-xl text-black">{row.qty}</span>
                 <span className="text-xl text-black">
-                  {formatRupiah(row.keuntungan)}
+                  {row.profit_str || formatRupiah(row.profit)}
                 </span>
               </div>
             ))}
@@ -134,7 +141,10 @@ export default function DashboardPage() {
 
         <Card className="flex flex-col gap-4 rounded-xl bg-neutral-200">
           <h2 className="text-lg font-semibold text-fg-default">Penjualan</h2>
-          <SalesCompareChart />
+          <SalesCompareChart
+            thisWeek={analytics?.this_week.map((p) => p.qty)}
+            lastWeek={analytics?.last_week.map((p) => p.qty)}
+          />
         </Card>
       </div>
 
@@ -143,7 +153,7 @@ export default function DashboardPage() {
           <h2 className="text-lg font-bold font-heading text-fg-default">
             Penjualan Minggu Ini
           </h2>
-          <DonutChart />
+          <DonutChart slices={donutSlices} />
         </Card>
 
         <Card className="flex flex-col gap-2 rounded-xl bg-neutral-300 p-4 opacity-80">
@@ -162,17 +172,29 @@ export default function DashboardPage() {
           <span className="text-2xl font-bold font-heading text-fg-default">
             Stok Segera Habis!
           </span>
-          <span className="text-4xl font-bold font-heading text-secondary-600">
-            Minyak
-          </span>
+          {lowStock.length > 0 ? (
+            lowStock.slice(0, 2).map((r) => (
+              <span key={r.product} className="text-4xl font-bold font-heading text-secondary-600">
+                {r.product}
+              </span>
+            ))
+          ) : (
+            <span className="text-4xl font-bold font-heading text-secondary-600">Minyak</span>
+          )}
         </div>
         <div className="flex flex-col gap-2 rounded-xl bg-primary-100 p-4">
           <span className="text-2xl font-bold font-heading text-fg-default">
             Stok Segera Expired!
           </span>
-          <span className="text-4xl font-bold font-heading text-secondary-600">
-            Sirup
-          </span>
+          {expiring.length > 0 ? (
+            expiring.slice(0, 2).map((r) => (
+              <span key={r.product} className="text-4xl font-bold font-heading text-secondary-600">
+                {r.product}
+              </span>
+            ))
+          ) : (
+            <span className="text-4xl font-bold font-heading text-secondary-600">Sirup</span>
+          )}
         </div>
       </div>
 
