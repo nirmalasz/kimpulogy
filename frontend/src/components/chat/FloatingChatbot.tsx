@@ -3,6 +3,7 @@
 import { usePathname } from "next/navigation";
 import { useState } from "react";
 import { Bot, MessageSquare, SendHorizonal, X } from "lucide-react";
+import { sendChatbotMessage } from "@/services/api";
 
 type Message = {
   role: "user" | "bot";
@@ -19,24 +20,31 @@ export function FloatingChatbot() {
     },
   ]);
   const [input, setInput] = useState("");
+  const [sending, setSending] = useState(false);
 
   if (pathname === "/chatbot") return null;
 
-  const handleSend = (e: React.FormEvent) => {
+  const handleSend = async (e: React.FormEvent) => {
     e.preventDefault();
     const text = input.trim();
-    if (!text) return;
+    if (!text || sending) return;
     setMessages((prev) => [...prev, { role: "user", text }]);
     setInput("");
-    setTimeout(() => {
+    setSending(true);
+    try {
+      const res = await sendChatbotMessage(text);
+      setMessages((prev) => [...prev, { role: "bot", text: res.reply }]);
+    } catch (err) {
       setMessages((prev) => [
         ...prev,
         {
           role: "bot",
-          text: "Baik, saya catat. Fitur jawaban pintar akan tersedia setelah terhubung ke model AI.",
+          text: err instanceof Error ? err.message : "Kendala menghubungi Ari, coba lagi.",
         },
       ]);
-    }, 600);
+    } finally {
+      setSending(false);
+    }
   };
 
   return (

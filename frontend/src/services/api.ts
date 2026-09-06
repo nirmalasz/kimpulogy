@@ -111,7 +111,7 @@ export interface User {
   id: number;
   shop_id: number;
   name: string;
-  phone: string;
+  email: string;
   role: string;
 }
 
@@ -159,16 +159,16 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
 
 // --- Auth ---
 
-export function login(phone: string, password: string): Promise<AuthResponse> {
+export function login(email: string, password: string): Promise<AuthResponse> {
   return request("/auth/login", {
     method: "POST",
-    body: JSON.stringify({ phone, password }),
+    body: JSON.stringify({ email, password }),
   });
 }
 
 export function register(payload: {
   name: string;
-  phone: string;
+  email: string;
   password: string;
   shop_name?: string;
 }): Promise<AuthResponse> {
@@ -228,4 +228,107 @@ export function getDashboardMetrics(): Promise<DashboardMetrics> {
 
 export function getDashboardAnalytics(): Promise<DashboardAnalytics> {
   return request("/dashboard/analytics");
+}
+
+// --- Sales / Purchases ---
+
+export interface CreateSalesPayload {
+  items: { product_id: number; qty: number }[];
+}
+
+export interface CreateSalesResponse {
+  sales_created: number;
+  total_amount: number;
+  updated_stock: Record<number, number>;
+}
+
+export function createSales(payload: CreateSalesPayload): Promise<CreateSalesResponse> {
+  return request("/sales", {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+}
+
+export function createPurchase(payload: { product_id: number; qty: number; cost?: number }): Promise<{
+  id: number;
+  product_id: number;
+  new_stock: number;
+}> {
+  return request("/purchases", {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+}
+
+// --- Forecast ---
+
+export interface RestockRecommendation {
+  product_id: number;
+  name: string;
+  sku: string;
+  current_stock: number;
+  min_stock: number;
+  avg_daily: number;
+  forecast_7d: number;
+  p90_7d: number;
+  recommended_restock: number;
+  days_to_stockout: number;
+  urgency: "habis" | "urgent" | "soon" | "ok";
+  confidence: "high" | "medium" | "low";
+  in_model: boolean;
+}
+
+export interface RestockResponse {
+  horizon: number;
+  model_type: string;
+  source: string;
+  trained_at: string;
+  recommendations: RestockRecommendation[];
+}
+
+export function getForecastRestock(): Promise<RestockResponse> {
+  return request("/forecast/restock");
+}
+
+// --- Notifications ---
+
+export interface AppNotification {
+  id: string;
+  type: "low_stock" | "expiring" | "order" | "transaction";
+  title: string;
+  body: string;
+  time: string;
+}
+
+export interface NotificationsResponse {
+  notifications: AppNotification[];
+  unread_count: number;
+}
+
+export function getNotifications(): Promise<NotificationsResponse> {
+  return request("/notifications");
+}
+
+// --- Chatbot ---
+
+export function sendChatbotMessage(message: string): Promise<{ reply: string }> {
+  return request("/chatbot/message", {
+    method: "POST",
+    body: JSON.stringify({ message }),
+  });
+}
+
+// --- Product update/delete ---
+
+export function updateProduct(id: string, payload: Partial<Product> & { name: string }): Promise<void> {
+  return request(`/products/${id}`, {
+    method: "PUT",
+    body: JSON.stringify(payload),
+  });
+}
+
+export function deleteProduct(id: string): Promise<void> {
+  return request(`/products/${id}`, {
+    method: "DELETE",
+  });
 }

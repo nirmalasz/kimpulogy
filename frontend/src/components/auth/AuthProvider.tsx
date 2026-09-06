@@ -10,10 +10,10 @@ type AuthContextValue = {
   user: User | null;
   shop: Shop | null;
   loading: boolean;
-  login: (phone: string, password: string) => Promise<void>;
+  login: (email: string, password: string) => Promise<void>;
   register: (payload: {
     name: string;
-    phone: string;
+    email: string;
     password: string;
     shop_name?: string;
   }) => Promise<void>;
@@ -56,15 +56,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     };
   }, []);
 
-  const login = useCallback(async (phone: string, password: string) => {
-    const res = await apiLogin(phone, password);
+  const login = useCallback(async (email: string, password: string) => {
+    const res = await apiLogin(email, password);
     setToken(res.token);
     setUser(res.user);
     setShop(res.shop);
   }, []);
 
   const register = useCallback(
-    async (payload: { name: string; phone: string; password: string; shop_name?: string }) => {
+    async (payload: { name: string; email: string; password: string; shop_name?: string }) => {
       const res = await apiRegister(payload);
       setToken(res.token);
       setUser(res.user);

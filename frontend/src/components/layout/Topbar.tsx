@@ -1,46 +1,31 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Bell, LogOut, Search } from "lucide-react";
 import { useAuth } from "@/components/auth/AuthProvider";
-
-type Notification = {
-  id: number;
-  title: string;
-  body: string;
-  time: string;
-};
-
-const MOCK_NOTIFICATIONS: Notification[] = [
-  {
-    id: 1,
-    title: "Stok menipis",
-    body: "Minyak Goreng Bimoli tersisa 3 pcs.",
-    time: "5 menit lalu",
-  },
-  {
-    id: 2,
-    title: "Pesanan baru",
-    body: "Ada pesanan baru masuk sebesar Rp 45.000.",
-    time: "1 jam lalu",
-  },
-  {
-    id: 3,
-    title: "Pembayaran diterima",
-    body: "Pembayaran Rp 120.000 berhasil diverifikasi.",
-    time: "Kemarin",
-  },
-  {
-    id: 4,
-    title: "Stok akan kedaluwarsa",
-    body: "Sirup akan segera melewati tanggal kedaluwarsa.",
-    time: "Kemarin",
-  },
-];
+import { getNotifications, type AppNotification } from "@/services/api";
 
 export function Topbar() {
   const { user, shop, logout } = useAuth();
   const [notifOpen, setNotifOpen] = useState(false);
+  const [notifs, setNotifs] = useState<AppNotification[]>([]);
+  const [unread, setUnread] = useState(0);
+
+  useEffect(() => {
+    let cancelled = false;
+    getNotifications()
+      .then((res) => {
+        if (cancelled) return;
+        setNotifs(res.notifications);
+        setUnread(res.unread_count);
+      })
+      .catch(() => {
+        /* backend down — keep empty */
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   return (
     <header className="border-b border-fg-line bg-bg-default px-6">
@@ -62,7 +47,11 @@ export function Topbar() {
               onClick={() => setNotifOpen((v) => !v)}
             >
               <Bell className="h-5 w-5" />
-              <span className="absolute right-2.5 top-2.5 flex h-2.5 w-2.5 rounded-full bg-alert-solid" />
+              {unread > 0 ? (
+                <span className="absolute right-2 top-2 flex h-4 min-w-4 items-center justify-center rounded-full bg-alert-solid px-1 text-[10px] font-bold text-white">
+                  {unread > 9 ? "9+" : unread}
+                </span>
+              ) : null}
             </button>
 
             {notifOpen ? (
@@ -77,30 +66,34 @@ export function Topbar() {
                     <span className="text-base font-bold font-heading text-fg-default">
                       Notifikasi
                     </span>
-                    <span className="text-xs text-neutral-500">
-                      {MOCK_NOTIFICATIONS.length} baru
-                    </span>
+                    <span className="text-xs text-neutral-500">{unread} baru</span>
                   </div>
                   <div className="flex max-h-80 flex-col overflow-y-auto">
-                    {MOCK_NOTIFICATIONS.map((notif) => (
-                      <div
-                        key={notif.id}
-                        className="flex gap-3 border-b border-fg-line px-4 py-3 last:border-b-0 hover:bg-bg-subtle"
-                      >
-                        <span className="mt-1.5 h-2 w-2 shrink-0 rounded-full bg-secondary-600" />
-                        <div className="flex min-w-0 flex-col gap-0.5">
-                          <span className="text-sm font-semibold text-fg-default">
-                            {notif.title}
-                          </span>
-                          <span className="truncate text-sm text-fg-text">
-                            {notif.body}
-                          </span>
-                          <span className="text-xs text-neutral-500">
-                            {notif.time}
-                          </span>
+                    {notifs.length === 0 ? (
+                      <p className="px-4 py-6 text-center text-sm text-neutral-500">
+                        Tidak ada notifikasi baru
+                      </p>
+                    ) : (
+                      notifs.map((notif) => (
+                        <div
+                          key={notif.id}
+                          className="flex gap-3 border-b border-fg-line px-4 py-3 last:border-b-0 hover:bg-bg-subtle"
+                        >
+                          <span className="mt-1.5 h-2 w-2 shrink-0 rounded-full bg-secondary-600" />
+                          <div className="flex min-w-0 flex-col gap-0.5">
+                            <span className="text-sm font-semibold text-fg-default">
+                              {notif.title}
+                            </span>
+                            <span className="truncate text-sm text-fg-text">
+                              {notif.body}
+                            </span>
+                            <span className="text-xs text-neutral-500">
+                              {notif.time}
+                            </span>
+                          </div>
                         </div>
-                      </div>
-                    ))}
+                      ))
+                    )}
                   </div>
                 </div>
               </>

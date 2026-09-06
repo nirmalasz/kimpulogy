@@ -4,6 +4,7 @@ import { useRef, useState } from "react";
 import { Bot, SendHorizonal } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
+import { sendChatbotMessage } from "@/services/api";
 
 type Message = {
   role: "user" | "bot";
@@ -13,32 +14,39 @@ type Message = {
 const initialMessages: Message[] = [
   {
     role: "bot",
-    text: "Halo! Saya asisten LARISIN. Tanya tentang pesanan, stok, keuangan, atau forecast warung kamu.",
+    text: "Halo! Saya Ari, asisten LARISIN. Tanya soal stok, omzet, restock, atau pesanan warung kamu.",
   },
 ];
 
 export default function ChatbotPage() {
   const [messages, setMessages] = useState<Message[]>(initialMessages);
   const [input, setInput] = useState("");
+  const [sending, setSending] = useState(false);
   const formRef = useRef<HTMLFormElement>(null);
 
-  const handleSend = (e: React.FormEvent) => {
+  const handleSend = async (e: React.FormEvent) => {
     e.preventDefault();
     const text = input.trim();
-    if (!text) return;
+    if (!text || sending) return;
 
     setMessages((prev) => [...prev, { role: "user", text }]);
     setInput("");
+    setSending(true);
 
-    setTimeout(() => {
+    try {
+      const res = await sendChatbotMessage(text);
+      setMessages((prev) => [...prev, { role: "bot", text: res.reply }]);
+    } catch (err) {
       setMessages((prev) => [
         ...prev,
         {
           role: "bot",
-          text: "Baik, saya catat. Fitur jawaban pintar akan tersedia setelah terhubung ke model AI.",
+          text: err instanceof Error ? err.message : "Kendala menghubungi Ari, coba lagi.",
         },
       ]);
-    }, 600);
+    } finally {
+      setSending(false);
+    }
   };
 
   return (
@@ -93,7 +101,7 @@ export default function ChatbotPage() {
             placeholder="Tulis pesan..."
             className="h-12 flex-1 rounded-xl border border-fg-line bg-bg-subtle px-4 text-base text-fg-default placeholder:text-neutral-500 focus:border-primary-300 focus:outline-none"
           />
-          <Button type="submit" size="lg" aria-label="Kirim pesan">
+          <Button type="submit" size="lg" aria-label="Kirim pesan" disabled={sending}>
             <SendHorizonal className="h-5 w-5" />
           </Button>
         </form>

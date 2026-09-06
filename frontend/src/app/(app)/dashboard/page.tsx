@@ -198,7 +198,7 @@ export default function DashboardPage() {
         </div>
       </div>
 
-      <QuickScanModal open={scanOpen} onClose={() => setScanOpen(false)} />
+      <QuickScanModal open={scanOpen} onClose={() => setScanOpen(false)} onSaved={loadAnalytics} />
     </div>
   );
 }

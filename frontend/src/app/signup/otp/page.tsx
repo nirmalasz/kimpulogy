@@ -88,7 +88,7 @@ export default function OtpPage() {
       const signup = JSON.parse(sessionStorage.getItem("larixin-signup") ?? "{}");
       await register({
         name: signup.namaWarung || "Warung",
-        phone: signup.email || "",
+        email: signup.email || "",
         password: signup.password || "",
         shop_name: signup.namaWarung,
       });

@@ -4,9 +4,11 @@ import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/Button";
 import { PublicNavbar } from "@/components/layout/PublicNavbar";
 import { HelloIllustration } from "@/components/illustrations/Illustrations";
+import { useAuth } from "@/components/auth/AuthProvider";
 
 export default function SignupSuccessPage() {
   const router = useRouter();
+  const { shop } = useAuth();
 
   const handleStart = () => {
     sessionStorage.removeItem("larixin-signup");
@@ -24,7 +26,7 @@ export default function SignupSuccessPage() {
                 Selamat Datang!
               </h1>
               <p className="text-lg text-fg-text">
-                Warung Mama Zafran sudah siap dilarisin
+                {shop?.name ?? "Warungmu"} sudah siap dilarisin
               </p>
             </div>
             <Button size="lg" onClick={handleStart}>

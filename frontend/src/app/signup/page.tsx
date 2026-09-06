@@ -1,6 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { useState } from "react";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
@@ -110,6 +111,12 @@ export default function SignupPage() {
                 Daftarkan akun
               </Button>
             </form>
+            <p className="mt-6 text-center text-base text-fg-text">
+              Sudah punya akun?{" "}
+              <Link href="/login" className="font-semibold text-primary-400 hover:underline">
+                Masuk sekarang
+              </Link>
+            </p>
           </section>
           <SignupIllustration className="hidden lg:block" />
         </div>

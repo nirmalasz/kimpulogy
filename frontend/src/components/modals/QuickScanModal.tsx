@@ -4,39 +4,42 @@ import { useState } from "react";
 import { Minus, Plus } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { Modal } from "@/components/ui/Modal";
-import { getProductBySKU } from "@/services/api";
+import { getProductBySKU, createSales } from "@/services/api";
 
 type ScannedItem = {
   id: number;
+  productId: number;
   name: string;
   sku: string;
   qty: number;
 };
 
-const MOCK_SCANNED: ScannedItem[] = [];
-
 type QuickScanModalProps = {
   open: boolean;
   onClose: () => void;
+  onSaved?: () => void;
 };
 
-export function QuickScanModal({ open, onClose }: QuickScanModalProps) {
-  const [items, setItems] = useState<ScannedItem[]>(MOCK_SCANNED);
+export function QuickScanModal({ open, onClose, onSaved }: QuickScanModalProps) {
+  const [items, setItems] = useState<ScannedItem[]>([]);
   const [sku, setSku] = useState("");
   const [lookupError, setLookupError] = useState<string | null>(null);
   const [searching, setSearching] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [saved, setSaved] = useState(false);
 
   const adjustQty = (id: number, delta: number) => {
     setItems((prev) =>
       prev.map((item) =>
-        item.id === id
-          ? { ...item, qty: Math.max(1, item.qty + delta) }
-          : item
+        item.id === id ? { ...item, qty: Math.max(1, item.qty + delta) } : item
       )
     );
   };
 
-  const clearAll = () => setItems([]);
+  const clearAll = () => {
+    setItems([]);
+    setSaved(false);
+  };
 
   const handleManualAdd = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -46,18 +49,17 @@ export function QuickScanModal({ open, onClose }: QuickScanModalProps) {
     setLookupError(null);
     try {
       const product = await getProductBySKU(trimmed);
-      const existing = items.find((i) => i.sku === product.sku);
+      const existing = items.find((i) => i.productId === Number(product.id));
       if (existing) {
         setItems((prev) =>
-          prev.map((i) =>
-            i.id === existing.id ? { ...i, qty: i.qty + 1 } : i
-          )
+          prev.map((i) => (i.id === existing.id ? { ...i, qty: i.qty + 1 } : i))
         );
       } else {
         setItems((prev) => [
           ...prev,
           {
             id: Date.now(),
+            productId: Number(product.id),
             name: product.name,
             sku: product.sku || trimmed,
             qty: 1,
@@ -72,10 +74,36 @@ export function QuickScanModal({ open, onClose }: QuickScanModalProps) {
     }
   };
 
+  const handleSave = async () => {
+    if (items.length === 0) return;
+    setSaving(true);
+    try {
+      await createSales({
+        items: items.map((i) => ({ product_id: i.productId, qty: i.qty })),
+      });
+      setSaved(true);
+      onSaved?.();
+    } catch (err) {
+      setLookupError(err instanceof Error ? err.message : "Gagal menyimpan penjualan");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleClose = () => {
+    if (!saving) {
+      setItems([]);
+      setSaved(false);
+      setSku("");
+      setLookupError(null);
+      onClose();
+    }
+  };
+
   return (
     <Modal
       open={open}
-      onClose={onClose}
+      onClose={handleClose}
       title="Quick Scan"
       maxWidth="max-w-3xl"
     >
@@ -131,7 +159,9 @@ export function QuickScanModal({ open, onClose }: QuickScanModalProps) {
 
             {items.length === 0 ? (
               <p className="py-6 text-center text-sm text-neutral-500">
-                Belum ada barang discan
+                {saved
+                  ? "Penjualan berhasil disimpan!"
+                  : "Belum ada barang discan"}
               </p>
             ) : (
               <div className="flex max-h-[19rem] flex-col overflow-y-auto">
@@ -174,11 +204,15 @@ export function QuickScanModal({ open, onClose }: QuickScanModalProps) {
           </div>
 
           <div className="flex items-center justify-end gap-3">
-            <Button variant="outline" size="md" onClick={onClose}>
+            <Button variant="outline" size="md" onClick={handleClose}>
               Batalkan
             </Button>
-            <Button size="md" onClick={onClose}>
-              Simpan perubahan
+            <Button
+              size="md"
+              onClick={handleSave}
+              disabled={items.length === 0 || saving}
+            >
+              {saving ? "Menyimpan..." : saved ? "Tersimpan" : "Simpan perubahan"}
             </Button>
           </div>
         </div>

@@ -28,7 +28,7 @@ export function Sidebar() {
 
   const handleLogout = () => {
     logout();
-    router.replace("/signup");
+    router.replace("/login");
   };
 
   return (
