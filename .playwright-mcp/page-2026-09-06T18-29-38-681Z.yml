@@ -1,0 +1,157 @@
+- generic [ref=f4e1]:
+  - generic [ref=f4e2]:
+    - complementary [ref=f4e3]:
+      - link "LARISIN" [ref=f4e4] [cursor=pointer]:
+        - /url: /
+        - img "LARISIN" [ref=f4e5]
+      - navigation [ref=f4e6]:
+        - link "Dashboard" [ref=f4e7] [cursor=pointer]:
+          - /url: /dashboard
+        - link "Stok" [ref=f4e11] [cursor=pointer]:
+          - /url: /stock
+        - link "Keuangan" [ref=f4e16] [cursor=pointer]:
+          - /url: /finance
+        - link "Forecast" [ref=f4e20] [cursor=pointer]:
+          - /url: /forecast
+        - link "Chatbot AI" [ref=f4e23] [cursor=pointer]:
+          - /url: /chatbot
+      - button "Keluar" [ref=f4e26]
+    - generic [ref=f4e30]:
+      - banner [ref=f4e31]:
+        - generic [ref=f4e32]:
+          - searchbox "Cari..." [ref=f4e37]
+          - generic [ref=f4e38]:
+            - button "Notifikasi" [ref=f4e40]:
+              - generic [ref=f4e108]: "7"
+            - generic [ref=f4e44]:
+              - generic [ref=f4e45]: Z
+              - generic [ref=f4e46]:
+                - generic [ref=f4e47]: Zafran
+                - generic [ref=f4e48]: Warung Mama Zafran
+              - button "Keluar" [ref=f4e49]
+      - main [ref=f4e53]:
+        - generic [ref=f4e54]:
+          - generic [ref=f4e55]:
+            - generic [ref=f4e56]:
+              - heading "Daftar Stok" [level=1] [ref=f4e57]
+              - paragraph [ref=f4e58]: Pantau ketersediaan barang dan sesuaikan persediaan dengan kebutuhan
+            - generic [ref=f4e59]:
+              - button "Refresh Data" [ref=f4e60]
+              - button "Quick Scan" [ref=f4e66]
+              - button "Tambah Produk" [active] [ref=f4e72]
+          - generic [ref=f4e74]:
+            - generic [ref=f4e75]:
+              - searchbox "Cari produk atau SKU..." [ref=f4e80]
+              - generic [ref=f4e81]:
+                - button "Semua" [ref=f4e82]
+                - button "Menipis" [ref=f4e83]
+                - button "Habis" [ref=f4e84]
+            - generic [ref=f4e85]:
+              - generic [ref=f4e86]:
+                - generic [ref=f4e87]: Produk & SKU
+                - generic [ref=f4e88]: Kategori
+                - generic [ref=f4e89]: Harga Jual
+                - generic [ref=f4e90]: Stok
+                - generic [ref=f4e91]: Kedaluwarsa
+                - generic [ref=f4e92]: Aksi
+              - generic [ref=f4e109]:
+                - generic [ref=f4e110]:
+                  - generic [ref=f4e111]: S
+                  - generic [ref=f4e112]:
+                    - generic [ref=f4e113]: Seblak Ceker
+                    - generic [ref=f4e114]: SBK-CKR-01
+                - generic [ref=f4e115]: Makanan
+                - generic [ref=f4e117]: Rp 14.000
+                - generic [ref=f4e118]: 42 pcs
+                - generic [ref=f4e120]: "-"
+                - generic [ref=f4e121]:
+                  - button "Lihat Seblak Ceker" [ref=f4e122]
+                  - button "Edit Seblak Ceker" [ref=f4e126]
+                  - button "Hapus Seblak Ceker" [ref=f4e130]
+              - generic [ref=f4e134]:
+                - generic [ref=f4e135]:
+                  - generic [ref=f4e136]: I
+                  - generic [ref=f4e137]:
+                    - generic [ref=f4e138]: Indomie Goreng
+                    - generic [ref=f4e139]: IDM-GRG-01
+                - generic [ref=f4e140]: Makanan
+                - generic [ref=f4e142]: Rp 12.000
+                - generic [ref=f4e143]: 8 pcs
+                - generic [ref=f4e145]: "-"
+                - generic [ref=f4e146]:
+                  - button "Lihat Indomie Goreng" [ref=f4e147]
+                  - button "Edit Indomie Goreng" [ref=f4e151]
+                  - button "Hapus Indomie Goreng" [ref=f4e155]
+              - generic [ref=f4e159]:
+                - generic [ref=f4e160]:
+                  - generic [ref=f4e161]: E
+                  - generic [ref=f4e162]:
+                    - generic [ref=f4e163]: Es Teh Manis
+                    - generic [ref=f4e164]: TEH-MNS-01
+                - generic [ref=f4e165]: Minuman
+                - generic [ref=f4e167]: Rp 3.000
+                - generic [ref=f4e168]: 60 pcs
+                - generic [ref=f4e170]: "-"
+                - generic [ref=f4e171]:
+                  - button "Lihat Es Teh Manis" [ref=f4e172]
+                  - button "Edit Es Teh Manis" [ref=f4e176]
+                  - button "Hapus Es Teh Manis" [ref=f4e180]
+              - generic [ref=f4e184]:
+                - generic [ref=f4e185]:
+                  - generic [ref=f4e186]: K
+                  - generic [ref=f4e187]:
+                    - generic [ref=f4e188]: Kerupuk
+                    - generic [ref=f4e189]: KRP-001-01
+                - generic [ref=f4e190]: Camilan
+                - generic [ref=f4e192]: Rp 2.000
+                - generic [ref=f4e193]: 120 pcs
+                - generic [ref=f4e195]: "-"
+                - generic [ref=f4e196]:
+                  - button "Lihat Kerupuk" [ref=f4e197]
+                  - button "Edit Kerupuk" [ref=f4e201]
+                  - button "Hapus Kerupuk" [ref=f4e205]
+              - generic [ref=f4e209]:
+                - generic [ref=f4e210]:
+                  - generic [ref=f4e211]: S
+                  - generic [ref=f4e212]:
+                    - generic [ref=f4e213]: Seblak Basah
+                    - generic [ref=f4e214]: SBK-BSH-01
+                - generic [ref=f4e215]: Makanan
+                - generic [ref=f4e217]: Rp 15.000
+                - generic [ref=f4e218]: 5 pcs
+                - generic [ref=f4e220]: "-"
+                - generic [ref=f4e221]:
+                  - button "Lihat Seblak Basah" [ref=f4e222]
+                  - button "Edit Seblak Basah" [ref=f4e226]
+                  - button "Hapus Seblak Basah" [ref=f4e230]
+              - generic [ref=f4e234]:
+                - generic [ref=f4e235]:
+                  - generic [ref=f4e236]: M
+                  - generic [ref=f4e237]:
+                    - generic [ref=f4e238]: Minyak Goreng Bimoli
+                    - generic [ref=f4e239]: MGB-2477-14
+                - generic [ref=f4e240]: Sembako
+                - generic [ref=f4e242]: Rp 35.000
+                - generic [ref=f4e243]: 2 pcs
+                - generic [ref=f4e245]: "-"
+                - generic [ref=f4e246]:
+                  - button "Lihat Minyak Goreng Bimoli" [ref=f4e247]
+                  - button "Edit Minyak Goreng Bimoli" [ref=f4e251]
+                  - button "Hapus Minyak Goreng Bimoli" [ref=f4e255]
+              - generic [ref=f4e259]:
+                - generic [ref=f4e260]:
+                  - generic [ref=f4e261]: S
+                  - generic [ref=f4e262]:
+                    - generic [ref=f4e263]: Sirup Marjan
+                    - generic [ref=f4e264]: SRP-MRJ-01
+                - generic [ref=f4e265]: Minuman
+                - generic [ref=f4e267]: Rp 18.000
+                - generic [ref=f4e268]: 12 pcs
+                - generic [ref=f4e270]: "-"
+                - generic [ref=f4e271]:
+                  - button "Lihat Sirup Marjan" [ref=f4e272]
+                  - button "Edit Sirup Marjan" [ref=f4e276]
+                  - button "Hapus Sirup Marjan" [ref=f4e280]
+        - button "Buka chat Ari" [ref=f4e95]
+  - button "Open Next.js Dev Tools" [ref=f4e103] [cursor=pointer]
+  - alert [ref=f4e107]

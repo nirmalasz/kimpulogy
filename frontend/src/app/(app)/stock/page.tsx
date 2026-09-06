@@ -140,7 +140,7 @@ export default function StockPage() {
             <ScanLine className="h-5 w-5" />
             Quick Scan
           </Button>
-          <Button onClick={() => setEditProduct(null)}>
+          <Button onClick={() => { setEditProduct(null); setAddOpen(true); }}>
             <Plus className="h-5 w-5" />
             Tambah Produk
           </Button>

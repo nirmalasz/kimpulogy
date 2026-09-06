@@ -77,15 +77,21 @@ export function QuickScanModal({ open, onClose, onSaved }: QuickScanModalProps) 
   const handleSave = async () => {
     if (items.length === 0) return;
     setSaving(true);
+    setLookupError(null);
     try {
       await createSales({
         items: items.map((i) => ({ product_id: i.productId, qty: i.qty })),
       });
       setSaved(true);
       onSaved?.();
+      setTimeout(() => {
+        setItems([]);
+        setSaved(false);
+        setSku("");
+        onClose();
+      }, 350);
     } catch (err) {
       setLookupError(err instanceof Error ? err.message : "Gagal menyimpan penjualan");
-    } finally {
       setSaving(false);
     }
   };
