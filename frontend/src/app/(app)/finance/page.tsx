@@ -87,24 +87,30 @@ const handleAddTransaction = async (payload: CreateTransactionPayload) => {
         { label: "Nett Profit", value: "Rp 1.097.000", caption: "Laba Bersih" },
       ];
 
-  const componentSlices: DonutSlice[] = components.length > 0
-    ? [
-        { label: "Total Pemasukan (Omset)", value: Math.round(omset), color: MIX_COLORS[0] },
-        { label: "HPP", value: Math.round(hpp), color: MIX_COLORS[1] },
-        { label: "Laba Kotor", value: Math.max(0, Math.round(gross)), color: MIX_COLORS[2] },
-        { label: "Biaya Operasional", value: Math.round(biaya), color: MIX_COLORS[3] },
-      ]
-    : [
-        { label: "Total Pemasukan", value: 18_000_000, color: MIX_COLORS[0] },
-        { label: "HPP", value: 8_000_000, color: MIX_COLORS[1] },
-        { label: "Laba Kotor", value: 10_000_000, color: MIX_COLORS[2] },
-        { label: "Biaya Operasional", value: 5_200_000, color: MIX_COLORS[3] },
-      ];
+  const componentValues = components.length > 0
+    ? [Math.max(0, omset), hpp, Math.max(0, gross), biaya]
+    : [18_000_000, 8_000_000, 10_000_000, 5_200_000];
+  const componentTotal = componentValues.reduce((sum, value) => sum + value, 0);
+  const componentPercentages = componentTotal > 0
+    ? componentValues.map((value) => (value / componentTotal) * 100)
+    : componentValues.map(() => 25);
+  const roundedComponentPercentages = componentPercentages.map(Math.floor);
+  const percentageRemainder = 100 - roundedComponentPercentages.reduce((sum, value) => sum + value, 0);
+  componentPercentages
+    .map((value, index) => ({ index, remainder: value - Math.floor(value) }))
+    .sort((a, b) => b.remainder - a.remainder)
+    .slice(0, percentageRemainder)
+    .forEach(({ index }) => {
+      roundedComponentPercentages[index] += 1;
+    });
+  const componentSlices: DonutSlice[] = componentPercentages.map((_, index) => ({
+    label: ["Total Pemasukan (Omset)", "HPP", "Laba Kotor", "Biaya Operasional"][index],
+    value: roundedComponentPercentages[index],
+    color: MIX_COLORS[index],
+  }));
 
   const masuk = transactions.filter((tx) => tx.type === "Masuk");
   const keluar = transactions.filter((tx) => tx.type === "Keluar");
-  const visible = 5;
-
   const renderHistory = (rows: Transaction[], accent: "income" | "expense") => (
     <div className="flex max-h-72 flex-col overflow-y-auto pr-1">
       {rows.length === 0 ? (
@@ -113,10 +119,10 @@ const handleAddTransaction = async (payload: CreateTransactionPayload) => {
         </p>
       ) : (
         <>
-          {rows.slice(0, visible).map((tx, index) => (
+          {rows.map((tx, index) => (
             <div
               key={tx.id || index}
-              className="flex items-center justify-between gap-4 border-b border-fg-line py-3 last:border-b-0"
+              className="flex shrink-0 items-center justify-between gap-4 border-b border-fg-line py-3 last:border-b-0"
             >
               <div className="flex min-w-0 items-center gap-3">
                 <span
@@ -150,11 +156,6 @@ const handleAddTransaction = async (payload: CreateTransactionPayload) => {
               </span>
             </div>
           ))}
-          {rows.length > visible ? (
-            <p className="py-2 text-center text-xs text-neutral-500">
-              +{rows.length - visible} lainnya
-            </p>
-          ) : null}
         </>
       )}
     </div>
