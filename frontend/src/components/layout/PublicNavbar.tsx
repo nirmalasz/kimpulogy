@@ -18,7 +18,7 @@ export function PublicNavbar() {
           </a>
         </nav>
         <div className="flex items-center gap-3">
-          <Button variant="ghost" href="/signup">
+          <Button variant="ghost" href="/login">
             Masuk
           </Button>
           <Button href="/signup">Daftar</Button>

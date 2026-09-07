@@ -4,17 +4,15 @@ import { useEffect, useState } from "react";
 import { Package, RefreshCw, ShoppingCart, TrendingUp, Wallet } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
+import { Modal } from "@/components/ui/Modal";
+import { Input } from "@/components/ui/Input";
+import { formatQty } from "@/lib/format";
 import {
   getForecastRestock,
   createPurchase,
   type RestockResponse,
   type RestockRecommendation,
 } from "@/services/api";
-
-function formatQty(v: number) {
-  if (v <= 0) return "0";
-  return v % 1 === 0 ? String(v) : v.toFixed(1);
-}
 
 const URGENCY_META: Record<string, { label: string; badge: string }> = {
   habis: { label: "Habis", badge: "bg-alert-solid text-white" },
@@ -27,8 +25,10 @@ export default function ForecastPage() {
   const [data, setData] = useState<RestockResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [restocking, setRestocking] = useState<number | null>(null);
   const [toast, setToast] = useState<string | null>(null);
+  const [target, setTarget] = useState<RestockRecommendation | null>(null);
+  const [qty, setQty] = useState("");
+  const [saving, setSaving] = useState(false);
 
   const load = async () => {
     try {
@@ -67,19 +67,28 @@ export default function ForecastPage() {
     };
   }, []);
 
-  const handleRestock = async (rec: RestockRecommendation) => {
-    setRestocking(rec.product_id);
+  const openRestock = (rec: RestockRecommendation) => {
+    setTarget(rec);
+    setQty(String(rec.recommended_restock));
+    setSaving(false);
+  };
+
+  const confirmRestock = async () => {
+    if (!target) return;
+    const n = Number(qty);
+    if (!Number.isFinite(n) || n <= 0) {
+      setToast("Jumlah harus angka lebih dari 0");
+      return;
+    }
+    setSaving(true);
     try {
-      await createPurchase({
-        product_id: rec.product_id,
-        qty: rec.recommended_restock,
-      });
-      setToast(`${rec.name}: stok bertambah ${rec.recommended_restock}`);
+      await createPurchase({ product_id: target.product_id, qty: n });
+      setToast(`${target.name}: stok bertambah ${n}`);
+      setTarget(null);
       await load();
     } catch (err) {
       setToast(err instanceof Error ? err.message : "Gagal mencatat pembelian");
-    } finally {
-      setRestocking(null);
+      setSaving(false);
     }
   };
 
@@ -99,7 +108,7 @@ export default function ForecastPage() {
         </div>
         <Button
           variant="secondary"
-onClick={refresh}
+          onClick={refresh}
           title="Refresh Data"
           aria-label="Refresh Data"
         >
@@ -163,10 +172,10 @@ onClick={refresh}
         </div>
         <div className="grid grid-cols-[minmax(0,2fr)_1fr_1fr_1fr_1fr_auto] items-center gap-3 border-b border-fg-line bg-secondary-100 px-4 py-2 text-sm font-bold font-heading text-fg-default">
           <span>Produk</span>
-          <span>Stok</span>
-          <span>Kebutuhan 7d</span>
-          <span>Rekomendasi</span>
-          <span>Status</span>
+          <span className="text-center">Stok</span>
+          <span className="text-center">Kebutuhan 7d</span>
+          <span className="text-center">Rekomendasi</span>
+          <span className="text-center">Status</span>
           <span className="w-24 text-right">Aksi</span>
         </div>
         <div className="flex flex-col">
@@ -188,10 +197,10 @@ onClick={refresh}
                     <span className="truncate font-semibold text-fg-default">{rec.name}</span>
                     {rec.sku ? <span className="truncate text-xs text-neutral-500">{rec.sku}</span> : null}
                   </div>
-                  <span className="text-fg-text">{rec.current_stock}</span>
-                  <span className="text-fg-text">{formatQty(rec.forecast_7d)}</span>
-                  <span className="font-bold text-secondary-600">{rec.recommended_restock}</span>
-                  <span>
+                  <span className="text-center text-fg-text">{rec.current_stock}</span>
+                  <span className="text-center text-fg-text">{formatQty(rec.forecast_7d)}</span>
+                  <span className="text-center font-bold text-secondary-600">{rec.recommended_restock}</span>
+                  <span className="flex justify-center">
                     <span className={`inline-block rounded-full px-3 py-1 text-xs font-semibold ${meta.badge}`}>
                       {meta.label}
                     </span>
@@ -199,10 +208,10 @@ onClick={refresh}
                   <span className="flex justify-end">
                     <Button
                       size="sm"
-                      disabled={restocking === rec.product_id || rec.recommended_restock <= 0}
-                      onClick={() => handleRestock(rec)}
+                      disabled={rec.recommended_restock <= 0}
+                      onClick={() => openRestock(rec)}
                     >
-                      {restocking === rec.product_id ? "..." : <Wallet className="h-4 w-4" />}
+                      <Wallet className="h-4 w-4" />
                       Catat
                     </Button>
                   </span>
@@ -251,6 +260,45 @@ onClick={refresh}
           </p>
         </Card>
       </div>
+
+      <Modal
+        open={!!target}
+        onClose={() => setTarget(null)}
+        title={target ? `Catat Pembelian — ${target.name}` : undefined}
+      >
+        {target ? (
+          <div className="flex flex-col gap-5">
+            <div className="grid grid-cols-2 gap-3 rounded-xl bg-bg-subtle p-4 text-sm">
+              <span className="text-neutral-500">Stok saat ini</span>
+              <span className="text-right font-medium text-fg-default">{target.current_stock}</span>
+              <span className="text-neutral-500">Rekomendasi</span>
+              <span className="text-right font-medium text-secondary-600">
+                {target.recommended_restock}
+              </span>
+              <span className="text-neutral-500">Perkiraan kebutuhan 7 hari</span>
+              <span className="text-right font-medium text-fg-default">
+                {formatQty(target.forecast_7d)}
+              </span>
+            </div>
+            <Input
+              label="Jumlah beli"
+              type="number"
+              min={1}
+              value={qty}
+              onChange={(e) => setQty(e.target.value)}
+              placeholder="Masukkan jumlah"
+            />
+            <div className="flex gap-3">
+              <Button variant="outline" size="lg" onClick={() => setTarget(null)}>
+                Batal
+              </Button>
+              <Button size="lg" fullWidth onClick={confirmRestock} disabled={saving}>
+                {saving ? "Menyimpan..." : "Simpan Pembelian"}
+              </Button>
+            </div>
+          </div>
+        ) : null}
+      </Modal>
     </div>
   );
 }

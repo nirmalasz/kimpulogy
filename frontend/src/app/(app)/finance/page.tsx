@@ -9,14 +9,12 @@ import {
 } from "lucide-react";
 import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
-import { DonutChart } from "@/components/charts/DonutChart";
+import { DonutChart, type DonutSlice } from "@/components/charts/DonutChart";
 import { AddTransactionModal } from "@/components/modals/AddTransactionModal";
 import {
-  getFinanceSummary,
   getFinanceComponents,
   getTransactions,
   createTransaction,
-  type FinanceSummary,
   type FinanceComponent,
   type Transaction,
   type CreateTransactionPayload,
@@ -32,7 +30,6 @@ function formatComponent(value: number) {
 }
 
 export default function FinancePage() {
-  const [summary, setSummary] = useState<FinanceSummary | null>(null);
   const [components, setComponents] = useState<FinanceComponent[]>([]);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [loading, setLoading] = useState(true);
@@ -43,12 +40,10 @@ export default function FinancePage() {
     setLoading(true);
     setError(null);
     try {
-      const [sumData, compData, txData] = await Promise.all([
-        getFinanceSummary(),
+      const [compData, txData] = await Promise.all([
         getFinanceComponents(),
         getTransactions(),
       ]);
-      setSummary(sumData);
       setComponents(compData.rows);
       setTransactions(txData);
     } catch (err: any) {
@@ -62,44 +57,47 @@ export default function FinancePage() {
     loadData();
   }, []);
 
-  const handleAddTransaction = async (payload: CreateTransactionPayload) => {
+  const MIX_COLORS = ["#EA6C0C", "#FBA33C", "#354973", "#A1BD25"];
+
+const handleAddTransaction = async (payload: CreateTransactionPayload) => {
     await createTransaction(payload);
     await loadData();
   };
 
-  const kpiCards = summary
+  const comp = (prefix: string) =>
+    components.find((c) => c.label.startsWith(prefix))?.value ?? 0;
+  const omset = comp("Total Pemasukan");
+  const hpp = Math.abs(comp("HPP"));
+  const gross = comp("Laba Kotor");
+  const biaya = Math.abs(comp("Biaya Operasional"));
+  const net = comp("Laba Bersih");
+
+  const kpiCards = components.length > 0
     ? [
-        {
-          label: "Total Pengeluaran",
-          value: formatRupiah(summary.total_expense),
-          trend: summary.expense_trend,
-          trendDown: true,
-        },
-        {
-          label: "Gross Margin",
-          value: formatRupiah(summary.total_revenue),
-          trend: summary.revenue_trend,
-        },
-        {
-          label: "Keuntungan Kotor",
-          value: `${
-            summary.total_revenue > 0
-              ? Math.round((summary.net_profit / summary.total_revenue) * 100)
-              : 0
-          }%`,
-          trend: summary.profit_trend,
-        },
-        {
-          label: "Nett Profit",
-          value: formatRupiah(summary.net_profit),
-          trend: summary.profit_trend,
-        },
+        { label: "Total Pengeluaran", value: formatRupiah(biaya), caption: "Biaya Operasional" },
+        { label: "Gross Margin", value: formatRupiah(omset), caption: "Total Pemasukan" },
+        { label: "Keuntungan Kotor", value: formatRupiah(gross), caption: "Laba Kotor" },
+        { label: "Nett Profit", value: formatRupiah(net), caption: "Laba Bersih" },
       ]
     : [
-        { label: "Total Pengeluaran", value: "Rp 8.000.000", trend: "Naik 8%", trendDown: true },
-        { label: "Gross Margin", value: "Rp 10.000.000", trend: "Naik 8%" },
-        { label: "Keuntungan Kotor", value: "30%", trend: "Naik 8%" },
-        { label: "Nett Profit", value: "Rp 6.000.000", trend: "Naik 8%" },
+        { label: "Total Pengeluaran", value: "Rp 8.000.000", caption: "Biaya Operasional" },
+        { label: "Gross Margin", value: "Rp 10.000.000", caption: "Total Pemasukan" },
+        { label: "Keuntungan Kotor", value: "Rp 6.000.000", caption: "Laba Kotor" },
+        { label: "Nett Profit", value: "Rp 1.097.000", caption: "Laba Bersih" },
+      ];
+
+  const componentSlices: DonutSlice[] = components.length > 0
+    ? [
+        { label: "Total Pemasukan (Omset)", value: Math.round(omset), color: MIX_COLORS[0] },
+        { label: "HPP", value: Math.round(hpp), color: MIX_COLORS[1] },
+        { label: "Laba Kotor", value: Math.max(0, Math.round(gross)), color: MIX_COLORS[2] },
+        { label: "Biaya Operasional", value: Math.round(biaya), color: MIX_COLORS[3] },
+      ]
+    : [
+        { label: "Total Pemasukan", value: 18_000_000, color: MIX_COLORS[0] },
+        { label: "HPP", value: 8_000_000, color: MIX_COLORS[1] },
+        { label: "Laba Kotor", value: 10_000_000, color: MIX_COLORS[2] },
+        { label: "Biaya Operasional", value: 5_200_000, color: MIX_COLORS[3] },
       ];
 
   const masuk = transactions.filter((tx) => tx.type === "Masuk");
@@ -201,14 +199,7 @@ export default function FinancePage() {
             <span className="text-2xl font-bold font-heading text-secondary-600">
               {stat.value}
             </span>
-            <span className="flex items-center gap-1 text-base text-black">
-              {stat.trend}
-              {stat.trendDown ? (
-                <TrendingDown className="h-5 w-5 text-fg-default" />
-              ) : (
-                <TrendingUp className="h-5 w-5 text-fg-default" />
-              )}
-            </span>
+            <span className="text-base text-black">{stat.caption}</span>
           </div>
         ))}
       </div>
@@ -280,9 +271,9 @@ export default function FinancePage() {
 
         <Card className="flex flex-col gap-4 rounded-xl bg-neutral-200">
           <h2 className="text-lg font-bold font-heading text-fg-default">
-            Minggu Ini
+            Komponen Keuangan
           </h2>
-          <DonutChart />
+          <DonutChart slices={componentSlices} />
         </Card>
       </div>
 

@@ -168,20 +168,30 @@ func migrateUserEmail(db *sql.DB) error {
 	if err != nil {
 		return err
 	}
-	if emailExists {
-		return nil
+
+	if !emailExists {
+		if _, err := db.Exec("ALTER TABLE users ADD COLUMN email TEXT"); err != nil {
+			return err
+		}
+		// Backfill email from phone where present
+		_, _ = db.Exec("UPDATE users SET email = phone WHERE email IS NULL OR email = ''")
+		// Fallback unique email for any rows without a phone value
+		_, _ = db.Exec("UPDATE users SET email = 'user' || id || '@larisin.id' WHERE email IS NULL OR email = ''")
+		_, _ = db.Exec("CREATE UNIQUE INDEX IF NOT EXISTS idx_users_email ON users(email)")
+		// SQLite >= 3.35 supports DROP COLUMN; ignore if unsupported
+		_, _ = db.Exec("ALTER TABLE users DROP COLUMN phone")
 	}
 
-	if _, err := db.Exec("ALTER TABLE users ADD COLUMN email TEXT"); err != nil {
+	// Avatar URL column (settings/profile)
+	hasAvatar, err := columnExists(db, "users", "avatar_url")
+	if err != nil {
 		return err
 	}
-	// Backfill email from phone where present
-	_, _ = db.Exec("UPDATE users SET email = phone WHERE email IS NULL OR email = ''")
-	// Fallback unique email for any rows without a phone value
-	_, _ = db.Exec("UPDATE users SET email = 'user' || id || '@larisin.id' WHERE email IS NULL OR email = ''")
-	_, _ = db.Exec("CREATE UNIQUE INDEX IF NOT EXISTS idx_users_email ON users(email)")
-	// SQLite >= 3.35 supports DROP COLUMN; ignore if unsupported
-	_, _ = db.Exec("ALTER TABLE users DROP COLUMN phone")
+	if !hasAvatar {
+		if _, err := db.Exec("ALTER TABLE users ADD COLUMN avatar_url TEXT"); err != nil {
+			return err
+		}
+	}
 
 	return nil
 }

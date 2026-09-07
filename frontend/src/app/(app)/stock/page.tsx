@@ -196,10 +196,10 @@ export default function StockPage() {
         <div className="flex flex-col">
           <div className="grid grid-cols-[2fr_1fr_1fr_1fr_1fr_auto] gap-4 rounded-t-lg bg-primary-500 px-3 py-3 text-base font-bold text-fg-text-contrast">
             <span>Produk & SKU</span>
-            <span>Kategori</span>
-            <span>Harga Jual</span>
-            <span>Stok</span>
-            <span>Kedaluwarsa</span>
+            <span className="text-center">Kategori</span>
+            <span className="text-center">Harga Jual</span>
+            <span className="text-center">Stok</span>
+            <span className="text-center">Kedaluwarsa</span>
             <span className="text-right">Aksi</span>
           </div>
           {loading && products.length === 0 ? (
@@ -235,13 +235,13 @@ export default function StockPage() {
                       ) : null}
                     </div>
                   </div>
-                  <div>
+                  <div className="flex justify-center">
                     <Badge tone="primary">{product.category || "-"}</Badge>
                   </div>
-                  <span className="text-fg-text font-medium">
+                  <span className="text-center text-fg-text font-medium">
                     {formatRupiah(product.price)}
                   </span>
-                  <div>
+                  <div className="flex justify-center">
                     <Badge
                       tone={
                         product.stock === 0
@@ -254,7 +254,7 @@ export default function StockPage() {
                       {product.stock === 0 ? "Habis" : `${product.stock} pcs`}
                     </Badge>
                   </div>
-                  <span className="text-sm text-fg-text">
+                  <span className="text-center text-sm text-fg-text">
                     {product.expiry_date || "-"}
                   </span>
                   <div className="flex justify-end gap-1">

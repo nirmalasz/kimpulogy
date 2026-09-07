@@ -18,6 +18,8 @@ type AuthContextValue = {
     shop_name?: string;
   }) => Promise<void>;
   logout: () => void;
+  setShopName: (name: string) => void;
+  setProfile: (name: string, email: string, avatar_url?: string) => void;
 };
 
 const AuthContext = createContext<AuthContextValue | null>(null);
@@ -79,8 +81,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setShop(null);
   }, []);
 
+  const setShopName = useCallback((name: string) => {
+    setShop((prev) => (prev ? { ...prev, name } : prev));
+  }, []);
+
+  const setProfile = useCallback((name: string, email: string, avatar_url?: string) => {
+    setUser((prev) =>
+      prev ? { ...prev, name, email, avatar_url: avatar_url ?? prev.avatar_url } : prev
+    );
+  }, []);
+
   return (
-    <AuthContext.Provider value={{ user, shop, loading, login, register, logout }}>
+    <AuthContext.Provider
+      value={{ user, shop, loading, login, register, logout, setShopName, setProfile }}
+    >
       {children}
     </AuthContext.Provider>
   );

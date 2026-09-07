@@ -55,8 +55,12 @@ func (h *FinanceHandler) GetSummary(w http.ResponseWriter, r *http.Request) {
 func (h *FinanceHandler) GetComponents(w http.ResponseWriter, r *http.Request) {
 	shopID := shopIDFrom(r)
 
+	// Omset = total income recorded (transactions Masuk includes Quick Scan sales)
 	var omset, hpp, biaya float64
-	_ = h.DB.QueryRow("SELECT COALESCE(SUM(total_nominal), 0) FROM sales WHERE shop_id = ?", shopID).Scan(&omset)
+	_ = h.DB.QueryRow(
+		"SELECT COALESCE(SUM(amount), 0) FROM transactions WHERE shop_id = ? AND type = ?",
+		shopID, models.TypeIncome,
+	).Scan(&omset)
 	_ = h.DB.QueryRow(
 		`SELECT COALESCE(SUM(s.quantity * p.cost), 0) FROM sales s JOIN products p ON p.id = s.product_id WHERE s.shop_id = ?`,
 		shopID,

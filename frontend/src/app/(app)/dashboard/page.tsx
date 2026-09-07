@@ -11,10 +11,7 @@ import {
   getDashboardAnalytics,
   type DashboardAnalytics,
 } from "@/services/api";
-
-function formatRupiah(value: number) {
-  return "Rp " + Math.round(value).toLocaleString("id-ID");
-}
+import { formatQty, formatRupiah } from "@/lib/format";
 
 const MIX_COLORS = ["#EA6C0C", "#FBA33C", "#354973", "#A1BD25", "#7F90BB", "#F98613", "#3D568F"];
 
@@ -115,8 +112,8 @@ export default function DashboardPage() {
         <Card padded={false} className="overflow-hidden">
           <div className="grid grid-cols-[minmax(0,2fr)_minmax(0,1fr)_minmax(0,2fr)] items-center bg-secondary-100 px-4 py-2 text-2xl font-bold font-heading text-fg-default">
             <span>Barang</span>
-            <span>Terjual</span>
-            <span>Keuntungan</span>
+            <span className="text-center">Terjual</span>
+            <span className="text-right">Keuntungan</span>
           </div>
           <div className="flex flex-col">
             {(analytics?.top_products || [
@@ -130,8 +127,8 @@ export default function DashboardPage() {
                 className="grid grid-cols-[minmax(0,2fr)_minmax(0,1fr)_minmax(0,2fr)] items-center border-t border-secondary-600 px-4 py-2.5"
               >
                 <span className="text-xl text-black">{row.name}</span>
-                <span className="text-xl text-black">{row.qty}</span>
-                <span className="text-xl text-black">
+                <span className="text-center text-xl text-black">{formatQty(row.qty)}</span>
+                <span className="text-right text-xl text-black">
                   {row.profit_str || formatRupiah(row.profit)}
                 </span>
               </div>

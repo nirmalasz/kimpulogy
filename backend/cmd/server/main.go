@@ -49,6 +49,7 @@ func main() {
 	notificationHandler := &handlers.NotificationHandler{DB: db}
 	chatbotHandler := &handlers.ChatbotHandler{DB: db}
 	forecastHandler := &handlers.ForecastHandler{DB: db, Model: handlers.LoadForecastModel(), Horizon: 7}
+	settingsHandler := &handlers.SettingsHandler{DB: db}
 
 	mux := http.NewServeMux()
 
@@ -183,6 +184,29 @@ func main() {
 			return
 		}
 		chatbotHandler.HandleMessage(w, r)
+	}))
+
+	// Settings endpoints
+	mux.HandleFunc("/api/v1/auth/password", handlers.AuthRequired(func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodPut {
+			http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+			return
+		}
+		settingsHandler.UpdatePassword(w, r)
+	}))
+	mux.HandleFunc("/api/v1/auth/profile", handlers.AuthRequired(func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodPut {
+			http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+			return
+		}
+		settingsHandler.UpdateProfile(w, r)
+	}))
+	mux.HandleFunc("/api/v1/shops", handlers.AuthRequired(func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodPut {
+			http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+			return
+		}
+		settingsHandler.UpdateShop(w, r)
 	}))
 
 	port := os.Getenv("PORT")

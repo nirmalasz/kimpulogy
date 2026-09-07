@@ -2,14 +2,13 @@
 
 import Link from "next/link";
 import Image from "next/image";
-import { usePathname, useRouter } from "next/navigation";
-import { useAuth } from "@/components/auth/AuthProvider";
+import { usePathname } from "next/navigation";
 import {
   BarChart3,
   Home,
-  LogOut,
   MessageSquareText,
   Package,
+  Settings,
   Wallet,
 } from "lucide-react";
 
@@ -23,13 +22,6 @@ const navItems = [
 
 export function Sidebar() {
   const pathname = usePathname();
-  const router = useRouter();
-  const { logout } = useAuth();
-
-  const handleLogout = () => {
-    logout();
-    router.replace("/login");
-  };
 
   return (
     <aside className="flex w-[119px] shrink-0 flex-col items-center bg-primary-500 py-6 text-fg-text-contrast">
@@ -59,15 +51,14 @@ export function Sidebar() {
           );
         })}
       </nav>
-      <button
-        type="button"
-        onClick={handleLogout}
+      <Link
+        href="/settings"
         className="mt-auto flex h-14 w-14 items-center justify-center rounded-xl text-fg-text-contrast/70 transition-colors hover:bg-fg-text-contrast/10"
-        title="Keluar"
-        aria-label="Keluar"
+        title="Settings"
+        aria-label="Settings"
       >
-        <LogOut className="h-6 w-6" />
-      </button>
+        <Settings className="h-6 w-6" />
+      </Link>
     </aside>
   );
 }

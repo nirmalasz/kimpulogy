@@ -113,6 +113,7 @@ export interface User {
   name: string;
   email: string;
   role: string;
+  avatar_url?: string;
 }
 
 export interface Shop {
@@ -330,5 +331,28 @@ export function updateProduct(id: string, payload: Partial<Product> & { name: st
 export function deleteProduct(id: string): Promise<void> {
   return request(`/products/${id}`, {
     method: "DELETE",
+  });
+}
+
+// --- Settings ---
+
+export function updatePassword(old_password: string, new_password: string): Promise<void> {
+  return request("/auth/password", {
+    method: "PUT",
+    body: JSON.stringify({ old_password, new_password }),
+  });
+}
+
+export function updateShop(name: string): Promise<void> {
+  return request("/shops", {
+    method: "PUT",
+    body: JSON.stringify({ name }),
+  });
+}
+
+export function updateProfile(payload: { name: string; email: string; avatar_url?: string }): Promise<void> {
+  return request("/auth/profile", {
+    method: "PUT",
+    body: JSON.stringify(payload),
   });
 }
