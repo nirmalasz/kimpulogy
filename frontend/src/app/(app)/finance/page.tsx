@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import {
+  Download,
   Plus,
   RefreshCw,
   TrendingDown,
@@ -102,54 +103,109 @@ const handleAddTransaction = async (payload: CreateTransactionPayload) => {
 
   const masuk = transactions.filter((tx) => tx.type === "Masuk");
   const keluar = transactions.filter((tx) => tx.type === "Keluar");
+  const visible = 5;
 
   const renderHistory = (rows: Transaction[], accent: "income" | "expense") => (
-    <div className="flex flex-col">
+    <div className="flex max-h-72 flex-col overflow-y-auto pr-1">
       {rows.length === 0 ? (
         <p className="py-6 text-center text-sm text-neutral-500">
           Belum ada transaksi tercatat
         </p>
       ) : (
-        rows.map((tx, index) => (
-          <div
-            key={tx.id || index}
-            className="flex items-center justify-between gap-4 py-3"
-          >
-            <div className="flex min-w-0 items-center gap-3">
+        <>
+          {rows.slice(0, visible).map((tx, index) => (
+            <div
+              key={tx.id || index}
+              className="flex items-center justify-between gap-4 border-b border-fg-line py-3 last:border-b-0"
+            >
+              <div className="flex min-w-0 items-center gap-3">
+                <span
+                  className={[
+                    "flex h-10 w-10 shrink-0 items-center justify-center rounded-lg",
+                    accent === "income"
+                      ? "bg-success-bg text-success-text"
+                      : "bg-alert-bg text-alert-text",
+                  ].join(" ")}
+                >
+                  {accent === "income" ? (
+                    <TrendingUp className="h-5 w-5" />
+                  ) : (
+                    <TrendingDown className="h-5 w-5" />
+                  )}
+                </span>
+                <div className="flex min-w-0 flex-col">
+                  <span className="truncate text-sm font-semibold text-fg-default">
+                    {tx.desc}
+                  </span>
+                  <span className="text-xs text-neutral-500">{tx.date}</span>
+                </div>
+              </div>
               <span
                 className={[
-                  "flex h-10 w-10 shrink-0 items-center justify-center rounded-lg",
-                  accent === "income"
-                    ? "bg-success-bg text-success-text"
-                    : "bg-alert-bg text-alert-text",
+                  "shrink-0 text-sm font-bold",
+                  accent === "income" ? "text-success-text" : "text-alert-text",
                 ].join(" ")}
               >
-                {accent === "income" ? (
-                  <TrendingUp className="h-5 w-5" />
-                ) : (
-                  <TrendingDown className="h-5 w-5" />
-                )}
+                {accent === "income" ? "+" : "-"} {formatRupiah(tx.amount)}
               </span>
-              <div className="flex min-w-0 flex-col">
-                <span className="truncate text-sm font-semibold text-fg-default">
-                  {tx.desc}
-                </span>
-                <span className="text-xs text-neutral-500">{tx.date}</span>
-              </div>
             </div>
-            <span
-              className={[
-                "shrink-0 text-sm font-bold",
-                accent === "income" ? "text-success-text" : "text-alert-text",
-              ].join(" ")}
-            >
-              {accent === "income" ? "+" : "-"} {formatRupiah(tx.amount)}
-            </span>
-          </div>
-        ))
+          ))}
+          {rows.length > visible ? (
+            <p className="py-2 text-center text-xs text-neutral-500">
+              +{rows.length - visible} lainnya
+            </p>
+          ) : null}
+        </>
       )}
     </div>
   );
+
+  const exportCSV = () => {
+    const esc = (v: string | number) => {
+      const s = String(v);
+      return /[",\n]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s;
+    };
+    const line = (cells: (string | number)[]) => cells.map(esc).join(",");
+
+    const fallbackComponents = [
+      { label: "Total Pemasukan (Omset)", value: 0 },
+      { label: "Harga Pokok Penjualan (HPP)", value: 0 },
+      { label: "Laba Kotor (Gross Profit)", value: 0 },
+      { label: "Biaya Operasional (Listrik, karyawan)", value: 0 },
+      { label: "Laba Bersih (Nett profit)", value: 0 },
+    ];
+
+    const csvRows: string[] = [];
+    csvRows.push("LARISIN - LAPORAN KEUANGAN");
+    csvRows.push("");
+    csvRows.push("KOMPONEN");
+    csvRows.push(line(["Komponen", "Jumlah (IDR)"]));
+    for (const c of components.length > 0 ? components : fallbackComponents) {
+      csvRows.push(line([c.label, formatComponent(c.value)]));
+    }
+    csvRows.push("");
+    csvRows.push("RIWAYAT PEMASUKAN");
+    csvRows.push(line(["Tanggal", "Keterangan", "Kategori", "Jumlah (IDR)"]));
+    for (const tx of masuk) {
+      csvRows.push(line([tx.date, tx.desc, tx.category, formatComponent(tx.amount)]));
+    }
+    csvRows.push("");
+    csvRows.push("RIWAYAT PENGELUARAN");
+    csvRows.push(line(["Tanggal", "Keterangan", "Kategori", "Jumlah (IDR)"]));
+    for (const tx of keluar) {
+      csvRows.push(line([tx.date, tx.desc, tx.category, formatComponent(tx.amount)]));
+    }
+
+    const blob = new Blob(["\uFEFF" + csvRows.join("\r\n")], { type: "text/csv;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "laporan-keuangan-" + new Date().toISOString().slice(0, 10) + ".csv";
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  };
 
   return (
     <div className="flex flex-col gap-6">
@@ -170,6 +226,10 @@ const handleAddTransaction = async (payload: CreateTransactionPayload) => {
             aria-label="Refresh Data"
           >
             <RefreshCw className={`h-4 w-4 ${loading ? "animate-spin" : ""}`} />
+          </Button>
+          <Button variant="outline" onClick={exportCSV}>
+            <Download className="h-5 w-5" />
+            Export CSV
           </Button>
           <Button onClick={() => setModalOpen(true)}>
             <Plus className="h-5 w-5" />
