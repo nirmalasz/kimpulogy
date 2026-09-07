@@ -194,7 +194,7 @@ export default function StockPage() {
         </div>
 
         <div className="flex flex-col">
-          <div className="grid grid-cols-[2fr_1fr_1fr_1fr_1fr_auto] gap-4 rounded-t-lg bg-primary-500 px-3 py-3 text-base font-bold text-fg-text-contrast">
+          <div className="grid grid-cols-[minmax(0,2fr)_minmax(0,1fr)_minmax(0,1fr)_minmax(0,1fr)_minmax(0,1fr)_10.25rem] gap-4 rounded-t-lg bg-primary-500 px-3 py-3 text-base font-bold text-fg-text-contrast">
             <span>Produk & SKU</span>
             <span className="text-center">Kategori</span>
             <span className="text-center">Harga Jual</span>
@@ -213,7 +213,7 @@ export default function StockPage() {
                 <div
                   key={product.id}
                   className={[
-                    "grid grid-cols-[2fr_1fr_1fr_1fr_1fr_auto] items-center gap-4 py-4 px-3",
+                    "grid grid-cols-[minmax(0,2fr)_minmax(0,1fr)_minmax(0,1fr)_minmax(0,1fr)_minmax(0,1fr)_10.25rem] items-center gap-4 py-4 px-3",
                     index < filtered.length - 1 ? "border-b border-fg-line" : "",
                     product.stock === 0
                       ? "bg-alert-bg/40"
