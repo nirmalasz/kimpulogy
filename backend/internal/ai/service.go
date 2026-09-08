@@ -228,6 +228,9 @@ func (s *Service) IsMarketQuery(message string) bool {
 		"hottest product", "produk paling populer", "produk populer", "produk yang sedang tren",
 		"produk tren", "tren produk", "tren pasar", "tren umkm", "tren umkm", "pasar umkm",
 		"produk yang lagi laris", "produk apa yang lagi laris", "tren sekarang",
+		"produk baru", "saran produk", "rekomendasi produk", "cocok untuk distock",
+		"cocok untuk di stok", "untuk distock", "selain yang ada", "di luar inventaris",
+		"belum terdaftar", "tidak terdaftar",
 	)
 }
 

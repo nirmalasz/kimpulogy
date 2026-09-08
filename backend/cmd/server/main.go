@@ -54,6 +54,7 @@ func main() {
 		log.Printf("AI service disabled: %v", aiErr)
 	} else if aiService.Enabled() {
 		log.Printf("AI service enabled with model %s", aiService.ModelName())
+		log.Printf("AI market search enabled: %t", aiService.MarketEnabled())
 	} else {
 		log.Printf("AI service disabled: GEMINI_API_KEY/GOOGLE_API_KEY missing or AI_ENABLED=false")
 	}
