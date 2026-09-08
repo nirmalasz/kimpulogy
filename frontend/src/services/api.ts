@@ -331,6 +331,7 @@ export function updateNotificationState(id: string, state: "read" | "dismissed")
 // --- Chatbot ---
 
 const CHAT_SESSION_KEY = "larisin_chat_session";
+const CHAT_SCOPE_KEY = "larisin_chat_scope";
 
 export interface ChatSource {
   title: string;
@@ -341,10 +342,11 @@ export interface ChatSource {
 export function clearChatbotSession() {
   if (typeof window !== "undefined") {
     window.sessionStorage.removeItem(CHAT_SESSION_KEY);
+    window.sessionStorage.removeItem(CHAT_SCOPE_KEY);
   }
 }
 
-export async function sendChatbotMessage(message: string): Promise<{
+export async function sendChatbotMessage(message: string, scope?: string): Promise<{
   reply: string;
   session_id?: string;
   source?: string;
@@ -354,6 +356,9 @@ export async function sendChatbotMessage(message: string): Promise<{
   const sessionId = typeof window === "undefined"
     ? undefined
     : window.sessionStorage.getItem(CHAT_SESSION_KEY) || undefined;
+  const sessionScope = scope || (typeof window === "undefined"
+    ? undefined
+    : window.sessionStorage.getItem(CHAT_SCOPE_KEY) || undefined);
   const response = await request<{
     reply: string;
     session_id?: string;
@@ -362,10 +367,13 @@ export async function sendChatbotMessage(message: string): Promise<{
     sources?: ChatSource[];
   }>("/chatbot/message", {
     method: "POST",
-    body: JSON.stringify({ message, session_id: sessionId }),
+    body: JSON.stringify({ message, session_id: sessionId, scope: sessionScope }),
   });
   if (typeof window !== "undefined" && response.session_id) {
     window.sessionStorage.setItem(CHAT_SESSION_KEY, response.session_id);
+  }
+  if (typeof window !== "undefined" && response.scope) {
+    window.sessionStorage.setItem(CHAT_SCOPE_KEY, response.scope);
   }
   return response;
 }

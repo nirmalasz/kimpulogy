@@ -234,6 +234,14 @@ func (s *Service) IsMarketQuery(message string) bool {
 	)
 }
 
+func (s *Service) IsPrivateQuery(message string) bool {
+	message = strings.ToLower(message)
+	return containsAny(message,
+		"stok", "habis", "barang", "restock", "forecast", "omzet", "penjualan",
+		"uang", "laba", "keuangan", "pemasukan", "pengeluaran", "pesanan", "order",
+	)
+}
+
 func (s *Service) MarketChat(ctx context.Context, userID int64, sessionID, message string) (string, string, []models.ChatSource, error) {
 	if !s.MarketEnabled() {
 		return "", sessionID, nil, ErrDisabled

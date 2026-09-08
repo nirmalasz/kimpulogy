@@ -37,7 +37,8 @@ func (h *ChatbotHandler) HandleMessage(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusBadRequest, "message is too long")
 		return
 	}
-	if h.AI != nil && h.AI.MarketEnabled() && h.AI.IsMarketQuery(req.Message) {
+	marketScope := req.Scope == "public_market"
+	if h.AI != nil && h.AI.MarketEnabled() && !h.AI.IsPrivateQuery(req.Message) && (marketScope || h.AI.IsMarketQuery(req.Message)) {
 		if reply, sessionID, sources, err := h.AI.MarketChat(r.Context(), userIDFrom(r), req.SessionID, req.Message); err == nil {
 			w.Header().Set("Content-Type", "application/json")
 			_ = json.NewEncoder(w).Encode(models.ChatbotResponse{
@@ -53,7 +54,7 @@ func (h *ChatbotHandler) HandleMessage(w http.ResponseWriter, r *http.Request) {
 	if h.AI != nil && h.AI.Enabled() {
 		if reply, sessionID, err := h.AI.Chat(r.Context(), shopID, userIDFrom(r), req.SessionID, req.Message); err == nil {
 			w.Header().Set("Content-Type", "application/json")
-			_ = json.NewEncoder(w).Encode(models.ChatbotResponse{Reply: reply, SessionID: sessionID, Source: "gemini"})
+			_ = json.NewEncoder(w).Encode(models.ChatbotResponse{Reply: reply, SessionID: sessionID, Source: "gemini", Scope: "private_shop"})
 			return
 		} else {
 			log.Printf("AI chatbot request failed: %v", err)
@@ -77,7 +78,7 @@ func (h *ChatbotHandler) HandleMessage(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.Header().Set("Content-Type", "application/json")
-	_ = json.NewEncoder(w).Encode(models.ChatbotResponse{Reply: reply, SessionID: req.SessionID, Source: "rule_based"})
+	_ = json.NewEncoder(w).Encode(models.ChatbotResponse{Reply: reply, SessionID: req.SessionID, Source: "rule_based", Scope: "private_shop"})
 }
 
 func (h *ChatbotHandler) answerStock(shopID int64) string {

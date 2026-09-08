@@ -281,6 +281,7 @@ type RestockResponse struct {
 type ChatbotRequest struct {
 	Message   string `json:"message"`
 	SessionID string `json:"session_id,omitempty"`
+	Scope     string `json:"scope,omitempty"`
 }
 
 type ChatbotResponse struct {

@@ -81,6 +81,7 @@ export function FloatingChatbot() {
             <button
               type="submit"
               aria-label="Kirim pesan"
+              disabled={sending}
               className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary-500 text-fg-text-contrast hover:bg-primary-400"
             >
               <SendHorizonal className="h-5 w-5" />

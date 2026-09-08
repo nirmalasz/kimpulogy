@@ -38,6 +38,7 @@ function isChatMessage(value: unknown): value is ChatMessage {
 export function ChatbotProvider({ children }: { children: ReactNode }) {
   const [messages, setMessages] = useState<ChatMessage[]>(initialMessages);
   const [sending, setSending] = useState(false);
+  const [scope, setScope] = useState<string | undefined>();
   const [hydrated, setHydrated] = useState(false);
 
   useEffect(() => {
@@ -48,6 +49,9 @@ export function ChatbotProvider({ children }: { children: ReactNode }) {
           const stored = JSON.parse(window.sessionStorage.getItem(CHAT_MESSAGES_KEY) ?? "null");
           if (!cancelled && Array.isArray(stored) && stored.every(isChatMessage)) {
             setMessages(stored);
+          }
+          if (!cancelled) {
+            setScope(window.sessionStorage.getItem("larisin_chat_scope") || undefined);
           }
         } catch {
           window.sessionStorage.removeItem(CHAT_MESSAGES_KEY);
@@ -72,7 +76,8 @@ export function ChatbotProvider({ children }: { children: ReactNode }) {
     setMessages((prev) => [...prev, { role: "user", text: trimmed }]);
     setSending(true);
     try {
-      const response = await sendChatbotMessage(trimmed);
+      const response = await sendChatbotMessage(trimmed, scope);
+      setScope(response.scope);
       const sources = response.sources?.length
         ? `\n\n**Sumber:**\n${response.sources.map((source) => `- [${source.title || source.domain || source.url}](${source.url})`).join("\n")}`
         : "";
@@ -92,6 +97,7 @@ export function ChatbotProvider({ children }: { children: ReactNode }) {
 
   const resetConversation = () => {
     setMessages(initialMessages);
+    setScope(undefined);
     clearChatbotSession();
     if (typeof window !== "undefined") {
       window.sessionStorage.removeItem(CHAT_MESSAGES_KEY);
