@@ -7,6 +7,14 @@ export function formatQty(v: number): string {
   return rounded.toFixed(2);
 }
 
+export function formatQtyWithUnit(v: number, unit = "pcs"): string {
+  return `${formatQty(v)} ${unit || "pcs"}`;
+}
+
+export function quantityStep(unit = "pcs"): number {
+  return ["kg", "g", "liter", "ml"].includes(unit) ? 0.01 : 1;
+}
+
 export function formatRupiah(value: number): string {
   return "Rp " + Math.round(value).toLocaleString("id-ID");
 }

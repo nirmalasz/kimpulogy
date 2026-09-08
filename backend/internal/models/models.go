@@ -1,6 +1,38 @@
 package models
 
-import "time"
+import (
+	"math"
+	"strings"
+	"time"
+)
+
+var AllowedProductUnits = map[string]bool{
+	"pcs": true, "pack": true, "box": true, "bottle": true,
+	"kg": true, "g": true, "liter": true, "ml": true,
+}
+
+func NormalizeProductUnit(unit string) string {
+	unit = strings.ToLower(strings.TrimSpace(unit))
+	if !AllowedProductUnits[unit] {
+		return "pcs"
+	}
+	return unit
+}
+
+func ProductUnitIsDiscrete(unit string) bool {
+	unit = NormalizeProductUnit(unit)
+	return unit == "pcs" || unit == "pack" || unit == "box" || unit == "bottle"
+}
+
+func ProductQuantityValid(value float64, unit string) bool {
+	if math.IsNaN(value) || math.IsInf(value, 0) || value < 0 {
+		return false
+	}
+	if ProductUnitIsDiscrete(unit) {
+		return math.Trunc(value) == value
+	}
+	return math.Abs(value*100-math.Round(value*100)) < 0.000001
+}
 
 type TransactionType string
 
@@ -55,11 +87,12 @@ type Product struct {
 	Category   string    `json:"category"`
 	Price      float64   `json:"price"`
 	Cost       float64   `json:"cost"`
-	Stock      int       `json:"stock"`
+	Stock      float64   `json:"stock"`
 	SKU        string    `json:"sku"`
 	Barcode    string    `json:"barcode,omitempty"`
 	ExpiryDate string    `json:"expiry_date,omitempty"`
-	MinStock   int       `json:"min_stock"`
+	MinStock   float64   `json:"min_stock"`
+	Unit       string    `json:"unit"`
 	CreatedAt  time.Time `json:"created_at"`
 	UpdatedAt  time.Time `json:"updated_at"`
 }
@@ -69,15 +102,16 @@ type CreateProductRequest struct {
 	Category   string  `json:"category"`
 	Price      float64 `json:"price"`
 	Cost       float64 `json:"cost"`
-	Stock      int     `json:"stock"`
+	Stock      float64 `json:"stock"`
 	SKU        string  `json:"sku"`
 	Barcode    string  `json:"barcode"`
 	ExpiryDate string  `json:"expiry_date"`
-	MinStock   int     `json:"min_stock"`
+	MinStock   float64 `json:"min_stock"`
+	Unit       string  `json:"unit"`
 }
 
 type UpdateProductStockRequest struct {
-	Stock int `json:"stock"`
+	Stock float64 `json:"stock"`
 }
 
 type UpdateProductRequest struct {
@@ -85,11 +119,12 @@ type UpdateProductRequest struct {
 	Category   string  `json:"category"`
 	Price      float64 `json:"price"`
 	Cost       float64 `json:"cost"`
-	Stock      int     `json:"stock"`
+	Stock      float64 `json:"stock"`
 	SKU        string  `json:"sku"`
 	Barcode    string  `json:"barcode"`
 	ExpiryDate string  `json:"expiry_date"`
-	MinStock   int     `json:"min_stock"`
+	MinStock   float64 `json:"min_stock"`
+	Unit       string  `json:"unit"`
 }
 
 type Order struct {
@@ -110,7 +145,7 @@ type DashboardMetrics struct {
 	TodayOrders   int     `json:"today_orders"`
 	TodayIncome   float64 `json:"today_income"`
 	TodayExpense  float64 `json:"today_expense"`
-	ProductsSold  int     `json:"products_sold"`
+	ProductsSold  float64 `json:"products_sold"`
 }
 
 // --- Auth ---
@@ -186,6 +221,7 @@ type TopProduct struct {
 	Quantity  float64 `json:"qty"`
 	Profit    float64 `json:"profit"`
 	ProfitStr string  `json:"profit_str"`
+	Unit      string  `json:"unit"`
 }
 
 type Reminder struct {
@@ -216,9 +252,9 @@ type CreateSalesRequest struct {
 }
 
 type CreateSalesResponse struct {
-	SalesCreated int           `json:"sales_created"`
-	TotalAmount  float64       `json:"total_amount"`
-	UpdatedStock map[int64]int `json:"updated_stock"`
+	SalesCreated int               `json:"sales_created"`
+	TotalAmount  float64           `json:"total_amount"`
+	UpdatedStock map[int64]float64 `json:"updated_stock"`
 }
 
 type CreatePurchaseRequest struct {
@@ -228,9 +264,9 @@ type CreatePurchaseRequest struct {
 }
 
 type CreatePurchaseResponse struct {
-	PurchaseID int64 `json:"id"`
-	ProductID  int64 `json:"product_id"`
-	NewStock   int   `json:"new_stock"`
+	PurchaseID int64   `json:"id"`
+	ProductID  int64   `json:"product_id"`
+	NewStock   float64 `json:"new_stock"`
 }
 
 // --- Notifications ---
@@ -256,16 +292,17 @@ type RestockRecommendation struct {
 	ProductID      int64   `json:"product_id"`
 	Name           string  `json:"name"`
 	SKU            string  `json:"sku"`
-	CurrentStock   int     `json:"current_stock"`
-	MinStock       int     `json:"min_stock"`
+	CurrentStock   float64 `json:"current_stock"`
+	MinStock       float64 `json:"min_stock"`
 	AvgDaily       float64 `json:"avg_daily"`
 	Forecast7D     float64 `json:"forecast_7d"`
 	P907D          float64 `json:"p90_7d"`
-	Recommended    int     `json:"recommended_restock"`
+	Recommended    float64 `json:"recommended_restock"`
 	DaysToStockout float64 `json:"days_to_stockout"`
 	Urgency        string  `json:"urgency"`    // habis | urgent | soon | ok
 	Confidence     string  `json:"confidence"` // high | medium | low
 	InModel        bool    `json:"in_model"`
+	Unit           string  `json:"unit"`
 }
 
 type RestockResponse struct {

@@ -5,6 +5,7 @@ import { Minus, Plus, Search } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { Modal } from "@/components/ui/Modal";
 import { createSales, getProducts, type Product } from "@/services/api";
+import { formatQtyWithUnit, quantityStep } from "@/lib/format";
 
 type ManualSaleItem = {
   product: Product;
@@ -58,23 +59,30 @@ export function ManualSaleModal({ open, onClose, onSaved }: ManualSaleModalProps
   });
 
   const addProduct = (product: Product) => {
-    if (product.stock <= 0) {
+    const step = quantityStep(product.unit);
+    if (product.stock < step) {
       setError(`${product.name} sedang habis.`);
       return;
     }
     setError(null);
     setItems((current) => {
       const existing = current.find((item) => item.product.id === product.id);
-      if (!existing) return [...current, { product, qty: 1 }];
+      if (!existing) return [...current, { product, qty: quantityStep(product.unit) }];
       return current.map((item) => item.product.id === product.id
-        ? { ...item, qty: Math.min(item.qty + 1, product.stock) }
+        ? { ...item, qty: Math.min(item.qty + quantityStep(product.unit), product.stock) }
         : item);
     });
   };
 
   const adjustQuantity = (productID: string, delta: number) => {
     setItems((current) => current.map((item) => item.product.id === productID
-      ? { ...item, qty: Math.max(1, Math.min(item.product.stock, item.qty + delta)) }
+      ? {
+          ...item,
+          qty: Math.max(
+            quantityStep(item.product.unit),
+            Math.min(item.product.stock, item.qty + delta * quantityStep(item.product.unit))
+          ),
+        }
       : item));
   };
 
@@ -136,7 +144,7 @@ export function ManualSaleModal({ open, onClose, onSaved }: ManualSaleModalProps
               <span className="flex min-w-0 flex-col">
                 <span className="truncate font-semibold text-fg-default">{product.name}</span>
                 <span className="text-xs text-neutral-500">
-                  {product.category || "Tanpa kategori"} · Stok {product.stock} · {formatRupiah(product.price)}
+                  {product.category || "Tanpa kategori"} · Stok {formatQtyWithUnit(product.stock, product.unit)} · {formatRupiah(product.price)}
                 </span>
               </span>
               <Plus className="h-5 w-5 shrink-0 text-primary-500" />
@@ -163,7 +171,9 @@ export function ManualSaleModal({ open, onClose, onSaved }: ManualSaleModalProps
                 >
                   <Minus className="h-4 w-4" />
                 </Button>
-                <span className="w-8 text-center text-sm font-bold">{item.qty}</span>
+                <span className="w-16 text-center text-sm font-bold">
+                  {formatQtyWithUnit(item.qty, item.product.unit)}
+                </span>
                 <Button
                   type="button"
                   variant="outline"

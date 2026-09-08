@@ -38,6 +38,7 @@ export interface Product {
   price: number;
   cost?: number;
   stock: number;
+  unit?: string;
   sku?: string;
   barcode?: string;
   expiry_date?: string;
@@ -80,6 +81,7 @@ export interface TopProduct {
   qty: number;
   profit: number;
   profit_str: string;
+  unit: string;
 }
 
 export interface Reminder {
@@ -282,6 +284,7 @@ export interface RestockRecommendation {
   forecast_7d: number;
   p90_7d: number;
   recommended_restock: number;
+  unit: string;
   days_to_stockout: number;
   urgency: "habis" | "urgent" | "soon" | "ok";
   confidence: "high" | "medium" | "low";

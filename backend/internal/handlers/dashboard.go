@@ -88,7 +88,7 @@ func (h *DashboardHandler) GetMetrics(w http.ResponseWriter, r *http.Request) {
 		TodayOrders:   todayOrders,
 		TodayIncome:   todayIncome,
 		TodayExpense:  todayExpense,
-		ProductsSold:  int(math.Round(totalSold)),
+		ProductsSold:  math.Round(totalSold),
 	}
 
 	w.Header().Set("Content-Type", "application/json")
@@ -117,7 +117,7 @@ func (h *DashboardHandler) GetAnalytics(w http.ResponseWriter, r *http.Request) 
 	todayDate := now.Format("2006-01-02")
 
 	rows, err := h.DB.Query(
-		`SELECT s.sale_date, s.quantity, s.total_nominal, p.name, p.cost, p.price
+		`SELECT s.sale_date, s.quantity, s.total_nominal, p.name, p.cost, p.price, COALESCE(p.unit, 'pcs')
 		 FROM sales s JOIN products p ON p.id = s.product_id
 		 WHERE s.shop_id = ? AND s.sale_date >= ? AND s.sale_date <= ?`,
 		shopID, lastWeekStart, todayDate,
@@ -131,16 +131,16 @@ func (h *DashboardHandler) GetAnalytics(w http.ResponseWriter, r *http.Request) 
 	mix := map[string]float64{}
 	top := map[string]*models.TopProduct{}
 	for rows.Next() {
-		var saleDate, name string
+		var saleDate, name, unit string
 		var qty, amount, cost, price float64
-		if err := rows.Scan(&saleDate, &qty, &amount, &name, &cost, &price); err != nil {
+		if err := rows.Scan(&saleDate, &qty, &amount, &name, &cost, &price, &unit); err != nil {
 			continue
 		}
 		if _, err := time.Parse("2006-01-02", saleDate); err != nil {
 			continue
 		}
 		if saleDate >= mixStart {
-			mix[name] += qty
+			mix[name] += amount
 		}
 		if saleDate >= thisWeekStart {
 			key := saleDate
@@ -164,7 +164,7 @@ func (h *DashboardHandler) GetAnalytics(w http.ResponseWriter, r *http.Request) 
 
 		// top products over the window
 		if top[name] == nil {
-			top[name] = &models.TopProduct{Name: name}
+			top[name] = &models.TopProduct{Name: name, Unit: models.NormalizeProductUnit(unit)}
 		}
 		top[name].Quantity += qty
 		top[name].Profit += qty * (price - cost)
@@ -220,7 +220,7 @@ func (h *DashboardHandler) GetAnalytics(w http.ResponseWriter, r *http.Request) 
 	// Reminders
 	reminders := []models.Reminder{}
 	prodRows, err := h.DB.Query(
-		`SELECT name, stock, min_stock, COALESCE(expiry_date,'') FROM products WHERE shop_id = ? ORDER BY name`,
+		`SELECT name, stock, min_stock, COALESCE(unit, 'pcs'), COALESCE(expiry_date,'') FROM products WHERE shop_id = ? ORDER BY name`,
 		shopID,
 	)
 	if err != nil {
@@ -229,14 +229,15 @@ func (h *DashboardHandler) GetAnalytics(w http.ResponseWriter, r *http.Request) 
 	}
 	defer prodRows.Close()
 	for prodRows.Next() {
-		var name, expiry string
-		var stock, minStock int
-		if err := prodRows.Scan(&name, &stock, &minStock, &expiry); err != nil {
+		var name, unit, expiry string
+		var stock, minStock float64
+		if err := prodRows.Scan(&name, &stock, &minStock, &unit, &expiry); err != nil {
 			writeError(w, http.StatusInternalServerError, err.Error())
 			return
 		}
+		unit = models.NormalizeProductUnit(unit)
 		if stock <= minStock {
-			reminders = append(reminders, models.Reminder{Type: "low_stock", Product: name, Info: fmt.Sprintf("tersisa %d pcs", stock)})
+			reminders = append(reminders, models.Reminder{Type: "low_stock", Product: name, Info: fmt.Sprintf("tersisa %g %s", stock, unit)})
 		}
 		if expiry != "" {
 			if expDate, err := time.ParseInLocation("2006-01-02", expiry, now.Location()); err == nil {

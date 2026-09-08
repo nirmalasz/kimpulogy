@@ -5,6 +5,7 @@ import { Minus, Plus } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { Modal } from "@/components/ui/Modal";
 import { getProductBySKU, createSales, type Product } from "@/services/api";
+import { formatQtyWithUnit, quantityStep } from "@/lib/format";
 import { Html5Qrcode, Html5QrcodeSupportedFormats } from "html5-qrcode";
 
 type ScannedItem = {
@@ -13,6 +14,8 @@ type ScannedItem = {
   name: string;
   sku: string;
   qty: number;
+  stock: number;
+  unit?: string;
 };
 
 type QuickScanModalProps = {
@@ -44,10 +47,17 @@ export function QuickScanModal({ open, onClose, onSaved }: QuickScanModalProps) 
   const lastDecoded = useRef("");
 
   const addProduct = (product: Product) => {
+    const step = quantityStep(product.unit);
+    if (product.stock < step) {
+      setLookupError(`${product.name} tidak memiliki stok yang cukup untuk satuan ${product.unit || "pcs"}.`);
+      return;
+    }
     const existing = items.find((i) => i.productId === Number(product.id));
     if (existing) {
       setItems((prev) =>
-        prev.map((i) => (i.id === existing.id ? { ...i, qty: i.qty + 1 } : i))
+        prev.map((i) => (i.id === existing.id
+          ? { ...i, qty: Math.min(i.stock, i.qty + quantityStep(i.unit)) }
+          : i))
       );
     } else {
       setItems((prev) => [
@@ -57,7 +67,9 @@ export function QuickScanModal({ open, onClose, onSaved }: QuickScanModalProps) 
           productId: Number(product.id),
           name: product.name,
           sku: product.sku || product.barcode || "",
-          qty: 1,
+          qty: quantityStep(product.unit),
+          stock: product.stock,
+          unit: product.unit,
         },
       ]);
     }
@@ -126,7 +138,12 @@ export function QuickScanModal({ open, onClose, onSaved }: QuickScanModalProps) 
   const adjustQty = (id: number, delta: number) => {
     setItems((prev) =>
       prev.map((item) =>
-        item.id === id ? { ...item, qty: Math.max(1, item.qty + delta) } : item
+        item.id === id
+          ? {
+              ...item,
+              qty: Math.max(quantityStep(item.unit), Math.min(item.stock, item.qty + delta * quantityStep(item.unit))),
+            }
+          : item
       )
     );
   };
@@ -282,10 +299,11 @@ const clearAll = () => {
                       >
                         <Minus className="h-4 w-4" />
                       </button>
-                      <span className="w-6 text-center text-sm">{item.qty}</span>
+                         <span className="w-16 text-center text-sm">{formatQtyWithUnit(item.qty, item.unit)}</span>
                       <button
                         type="button"
-                        onClick={() => adjustQty(item.id, 1)}
+                         onClick={() => adjustQty(item.id, 1)}
+                         disabled={item.qty >= item.stock}
                         aria-label={`Tambah jumlah ${item.name}`}
                         className="flex h-5 w-5 items-center justify-center rounded-full hover:bg-primary-400"
                       >

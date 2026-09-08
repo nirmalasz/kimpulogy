@@ -18,7 +18,7 @@ type ProductHandler struct {
 func (h *ProductHandler) GetProducts(w http.ResponseWriter, r *http.Request) {
 	shopID := shopIDFrom(r)
 	rows, err := h.DB.Query(
-		"SELECT id, name, category, price, cost, stock, COALESCE(sku, ''), COALESCE(barcode, ''), COALESCE(expiry_date, ''), min_stock, created_at, updated_at FROM products WHERE shop_id = ? ORDER BY id ASC",
+		"SELECT id, name, category, price, cost, stock, COALESCE(unit, 'pcs'), COALESCE(sku, ''), COALESCE(barcode, ''), COALESCE(expiry_date, ''), min_stock, created_at, updated_at FROM products WHERE shop_id = ? ORDER BY id ASC",
 		shopID,
 	)
 	if err != nil {
@@ -31,7 +31,7 @@ func (h *ProductHandler) GetProducts(w http.ResponseWriter, r *http.Request) {
 	for rows.Next() {
 		var p models.Product
 		var createdStr, updatedStr string
-		if err := rows.Scan(&p.ID, &p.Name, &p.Category, &p.Price, &p.Cost, &p.Stock, &p.SKU, &p.Barcode, &p.ExpiryDate, &p.MinStock, &createdStr, &updatedStr); err != nil {
+		if err := rows.Scan(&p.ID, &p.Name, &p.Category, &p.Price, &p.Cost, &p.Stock, &p.Unit, &p.SKU, &p.Barcode, &p.ExpiryDate, &p.MinStock, &createdStr, &updatedStr); err != nil {
 			continue
 		}
 		p.CreatedAt, _ = time.Parse("2006-01-02 15:04:05", createdStr)
@@ -59,9 +59,9 @@ func (h *ProductHandler) GetBySKU(w http.ResponseWriter, r *http.Request) {
 	var p models.Product
 	var createdStr, updatedStr string
 	err := h.DB.QueryRow(
-		"SELECT id, name, category, price, cost, stock, COALESCE(sku, ''), COALESCE(barcode, ''), COALESCE(expiry_date, ''), min_stock, created_at, updated_at FROM products WHERE shop_id = ? AND (sku = ? OR barcode = ?) LIMIT 1",
+		"SELECT id, name, category, price, cost, stock, COALESCE(unit, 'pcs'), COALESCE(sku, ''), COALESCE(barcode, ''), COALESCE(expiry_date, ''), min_stock, created_at, updated_at FROM products WHERE shop_id = ? AND (sku = ? OR barcode = ?) LIMIT 1",
 		shopID, sku, sku,
-	).Scan(&p.ID, &p.Name, &p.Category, &p.Price, &p.Cost, &p.Stock, &p.SKU, &p.Barcode, &p.ExpiryDate, &p.MinStock, &createdStr, &updatedStr)
+	).Scan(&p.ID, &p.Name, &p.Category, &p.Price, &p.Cost, &p.Stock, &p.Unit, &p.SKU, &p.Barcode, &p.ExpiryDate, &p.MinStock, &createdStr, &updatedStr)
 	if err == sql.ErrNoRows {
 		http.NotFound(w, r)
 		return
@@ -87,6 +87,11 @@ func (h *ProductHandler) CreateProduct(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "product name cannot be empty", http.StatusBadRequest)
 		return
 	}
+	req.Unit = models.NormalizeProductUnit(req.Unit)
+	if !models.ProductQuantityValid(req.Stock, req.Unit) || !models.ProductQuantityValid(req.MinStock, req.Unit) {
+		http.Error(w, "stock and minimum stock are invalid for selected unit", http.StatusBadRequest)
+		return
+	}
 
 	if req.MinStock <= 0 {
 		req.MinStock = 10
@@ -105,8 +110,8 @@ func (h *ProductHandler) CreateProduct(w http.ResponseWriter, r *http.Request) {
 	}
 
 	res, err := h.DB.Exec(
-		"INSERT INTO products (shop_id, name, category, price, cost, stock, sku, barcode, expiry_date, min_stock) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
-		shopIDFrom(r), req.Name, req.Category, req.Price, req.Cost, req.Stock, req.SKU, req.Barcode, req.ExpiryDate, req.MinStock,
+		"INSERT INTO products (shop_id, name, category, price, cost, stock, unit, sku, barcode, expiry_date, min_stock) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+		shopIDFrom(r), req.Name, req.Category, req.Price, req.Cost, req.Stock, req.Unit, req.SKU, req.Barcode, req.ExpiryDate, req.MinStock,
 	)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -122,6 +127,7 @@ func (h *ProductHandler) CreateProduct(w http.ResponseWriter, r *http.Request) {
 		Price:      req.Price,
 		Cost:       req.Cost,
 		Stock:      req.Stock,
+		Unit:       req.Unit,
 		SKU:        req.SKU,
 		Barcode:    req.Barcode,
 		ExpiryDate: req.ExpiryDate,
@@ -155,9 +161,9 @@ func (h *ProductHandler) HandleProductByID(w http.ResponseWriter, r *http.Reques
 		var p models.Product
 		var createdStr, updatedStr string
 		err := h.DB.QueryRow(
-			"SELECT id, name, category, price, cost, stock, COALESCE(sku, ''), COALESCE(barcode, ''), COALESCE(expiry_date, ''), min_stock, created_at, updated_at FROM products WHERE id = ? AND shop_id = ?",
+			"SELECT id, name, category, price, cost, stock, COALESCE(unit, 'pcs'), COALESCE(sku, ''), COALESCE(barcode, ''), COALESCE(expiry_date, ''), min_stock, created_at, updated_at FROM products WHERE id = ? AND shop_id = ?",
 			id, shopIDFrom(r),
-		).Scan(&p.ID, &p.Name, &p.Category, &p.Price, &p.Cost, &p.Stock, &p.SKU, &p.Barcode, &p.ExpiryDate, &p.MinStock, &createdStr, &updatedStr)
+		).Scan(&p.ID, &p.Name, &p.Category, &p.Price, &p.Cost, &p.Stock, &p.Unit, &p.SKU, &p.Barcode, &p.ExpiryDate, &p.MinStock, &createdStr, &updatedStr)
 		if err == sql.ErrNoRows {
 			http.NotFound(w, r)
 			return
@@ -181,6 +187,17 @@ func (h *ProductHandler) HandleProductByID(w http.ResponseWriter, r *http.Reques
 			http.Error(w, "product name cannot be empty", http.StatusBadRequest)
 			return
 		}
+		if strings.TrimSpace(req.Unit) == "" {
+			if err := h.DB.QueryRow("SELECT COALESCE(unit, 'pcs') FROM products WHERE id = ? AND shop_id = ?", id, shopIDFrom(r)).Scan(&req.Unit); err != nil {
+				http.Error(w, "product not found", http.StatusNotFound)
+				return
+			}
+		}
+		req.Unit = models.NormalizeProductUnit(req.Unit)
+		if !models.ProductQuantityValid(req.Stock, req.Unit) || !models.ProductQuantityValid(req.MinStock, req.Unit) {
+			http.Error(w, "stock and minimum stock are invalid for selected unit", http.StatusBadRequest)
+			return
+		}
 		if req.MinStock <= 0 {
 			req.MinStock = 10
 		}
@@ -198,10 +215,10 @@ func (h *ProductHandler) HandleProductByID(w http.ResponseWriter, r *http.Reques
 		}
 
 		res, err := h.DB.Exec(
-			`UPDATE products SET name = ?, category = ?, price = ?, cost = ?, stock = ?,
+			`UPDATE products SET name = ?, category = ?, price = ?, cost = ?, stock = ?, unit = ?,
 			 sku = ?, barcode = ?, expiry_date = ?, min_stock = ?, updated_at = CURRENT_TIMESTAMP
 			 WHERE id = ? AND shop_id = ?`,
-			req.Name, req.Category, req.Price, req.Cost, req.Stock,
+			req.Name, req.Category, req.Price, req.Cost, req.Stock, req.Unit,
 			req.SKU, req.Barcode, req.ExpiryDate, req.MinStock,
 			id, shopIDFrom(r),
 		)

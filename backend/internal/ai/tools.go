@@ -10,6 +10,8 @@ import (
 	"google.golang.org/adk/v2/agent"
 	"google.golang.org/adk/v2/tool"
 	"google.golang.org/adk/v2/tool/functiontool"
+
+	"kimpulogy/backend/internal/models"
 )
 
 type shopContextKey struct{}
@@ -33,10 +35,11 @@ type searchProductsArgs struct {
 }
 
 type stockItem struct {
-	Name     string `json:"name"`
-	Stock    int    `json:"stock"`
-	MinStock int    `json:"min_stock"`
-	Status   string `json:"status"`
+	Name     string  `json:"name"`
+	Stock    float64 `json:"stock"`
+	MinStock float64 `json:"min_stock"`
+	Status   string  `json:"status"`
+	Unit     string  `json:"unit"`
 }
 
 type stockResult struct {
@@ -51,9 +54,10 @@ type productResult struct {
 	Category string  `json:"category"`
 	SKU      string  `json:"sku"`
 	Barcode  string  `json:"barcode"`
-	Stock    int     `json:"stock"`
-	MinStock int     `json:"min_stock"`
+	Stock    float64 `json:"stock"`
+	MinStock float64 `json:"min_stock"`
 	Price    float64 `json:"price"`
+	Unit     string  `json:"unit"`
 }
 
 type financeResult struct {
@@ -68,8 +72,8 @@ type financeResult struct {
 
 type forecastItem struct {
 	Name              string  `json:"name"`
-	CurrentStock      int     `json:"current_stock"`
-	MinimumStock      int     `json:"minimum_stock"`
+	CurrentStock      float64 `json:"current_stock"`
+	MinimumStock      float64 `json:"minimum_stock"`
 	AverageDailySales float64 `json:"average_daily_sales"`
 	Recommended       float64 `json:"recommended_restock"`
 }
@@ -154,7 +158,7 @@ func (t *toolSet) stock(ctx agent.Context, _ emptyArgs) (stockResult, error) {
 	if err := t.db.QueryRow("SELECT COUNT(*) FROM products WHERE shop_id = ? AND stock <= min_stock", shopID).Scan(&low); err != nil {
 		return stockResult{}, err
 	}
-	rows, err := t.db.Query("SELECT name, stock, min_stock FROM products WHERE shop_id = ? AND stock <= min_stock ORDER BY stock ASC LIMIT 10", shopID)
+	rows, err := t.db.Query("SELECT name, stock, min_stock, COALESCE(unit, 'pcs') FROM products WHERE shop_id = ? AND stock <= min_stock ORDER BY stock ASC LIMIT 10", shopID)
 	if err != nil {
 		return stockResult{}, err
 	}
@@ -162,9 +166,10 @@ func (t *toolSet) stock(ctx agent.Context, _ emptyArgs) (stockResult, error) {
 	items := make([]stockItem, 0)
 	for rows.Next() {
 		var item stockItem
-		if err := rows.Scan(&item.Name, &item.Stock, &item.MinStock); err != nil {
+		if err := rows.Scan(&item.Name, &item.Stock, &item.MinStock, &item.Unit); err != nil {
 			return stockResult{}, err
 		}
+		item.Unit = models.NormalizeProductUnit(item.Unit)
 		item.Status = "menipis"
 		if item.Stock == 0 {
 			item.Status = "habis"
@@ -188,7 +193,7 @@ func (t *toolSet) searchProducts(ctx agent.Context, args searchProductsArgs) ([]
 	}
 	pattern := "%" + query + "%"
 	rows, err := t.db.Query(
-		`SELECT name, category, COALESCE(sku,''), COALESCE(barcode,''), stock, min_stock, price
+		`SELECT name, category, COALESCE(sku,''), COALESCE(barcode,''), stock, min_stock, price, COALESCE(unit, 'pcs')
 		 FROM products
 		 WHERE shop_id = ? AND (LOWER(name) LIKE ? OR LOWER(COALESCE(sku,'')) LIKE ? OR LOWER(COALESCE(barcode,'')) LIKE ?)
 		 ORDER BY name LIMIT 10`,
@@ -201,7 +206,7 @@ func (t *toolSet) searchProducts(ctx agent.Context, args searchProductsArgs) ([]
 	results := make([]productResult, 0)
 	for rows.Next() {
 		var item productResult
-		if err := rows.Scan(&item.Name, &item.Category, &item.SKU, &item.Barcode, &item.Stock, &item.MinStock, &item.Price); err != nil {
+		if err := rows.Scan(&item.Name, &item.Category, &item.SKU, &item.Barcode, &item.Stock, &item.MinStock, &item.Price, &item.Unit); err != nil {
 			return nil, err
 		}
 		results = append(results, item)
@@ -280,7 +285,7 @@ func (t *toolSet) notifications(ctx agent.Context, _ emptyArgs) (notificationRes
 	if err != nil {
 		return notificationResult{}, err
 	}
-	rows, err := t.db.Query("SELECT name, stock, min_stock, COALESCE(expiry_date,'') FROM products WHERE shop_id = ? ORDER BY name", shopID)
+	rows, err := t.db.Query("SELECT name, stock, min_stock, COALESCE(unit, 'pcs'), COALESCE(expiry_date,'') FROM products WHERE shop_id = ? ORDER BY name", shopID)
 	if err != nil {
 		return notificationResult{}, err
 	}
@@ -289,13 +294,14 @@ func (t *toolSet) notifications(ctx agent.Context, _ emptyArgs) (notificationRes
 	now := time.Now().In(time.Local)
 	today := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, now.Location())
 	for rows.Next() {
-		var name, expiry string
-		var stock, minStock int
-		if err := rows.Scan(&name, &stock, &minStock, &expiry); err != nil {
+		var name, unit, expiry string
+		var stock, minStock float64
+		if err := rows.Scan(&name, &stock, &minStock, &unit, &expiry); err != nil {
 			return notificationResult{}, err
 		}
+		unit = models.NormalizeProductUnit(unit)
 		if stock <= minStock {
-			items = append(items, fmt.Sprintf("%s: stok %d dari minimum %d", name, stock, minStock))
+			items = append(items, fmt.Sprintf("%s: stok %g %s dari minimum %g", name, stock, unit, minStock))
 		}
 		if expiry != "" {
 			if date, parseErr := time.ParseInLocation("2006-01-02", expiry, time.Local); parseErr == nil && !date.Before(today) && date.Before(today.AddDate(0, 0, 7)) {

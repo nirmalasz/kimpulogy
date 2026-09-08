@@ -13,6 +13,7 @@ import {
   type Product as DetailProduct,
 } from "@/components/modals/ProductDetailModal";
 import { QuickScanModal } from "@/components/modals/QuickScanModal";
+import { formatQtyWithUnit } from "@/lib/format";
 import {
   getProducts,
   createProduct,
@@ -124,7 +125,7 @@ export default function StockPage() {
     };
     const line = (cells: (string | number)[]) => cells.map(esc).join(",");
     const rows = [
-      line(["Produk", "SKU", "Barcode", "Kategori", "Harga Jual (IDR)", "Harga Modal (IDR)", "Stok", "Stok Minimum", "Kedaluwarsa"]),
+      line(["Produk", "SKU", "Barcode", "Kategori", "Harga Jual (IDR)", "Harga Modal (IDR)", "Stok", "Satuan", "Stok Minimum", "Kedaluwarsa"]),
       ...products.map((product) =>
         line([
           product.name,
@@ -134,6 +135,7 @@ export default function StockPage() {
           product.price,
           product.cost ?? 0,
           product.stock,
+          product.unit || "pcs",
           product.min_stock ?? 10,
           product.expiry_date || "",
         ])
@@ -289,7 +291,7 @@ export default function StockPage() {
                           : "success"
                       }
                     >
-                      {product.stock === 0 ? "Habis" : `${product.stock} pcs`}
+                      {product.stock === 0 ? "Habis" : formatQtyWithUnit(product.stock, product.unit)}
                     </Badge>
                   </div>
                   <span className="text-center text-sm text-fg-text">

@@ -21,7 +21,7 @@ func (h *NotificationHandler) GetNotifications(w http.ResponseWriter, r *http.Re
 	notifs := make([]models.AppNotification, 0)
 
 	rows, err := h.DB.Query(
-		`SELECT id, name, stock, min_stock, COALESCE(expiry_date,'')
+		`SELECT id, name, stock, min_stock, COALESCE(unit, 'pcs'), COALESCE(expiry_date,'')
 		 FROM products WHERE shop_id = ? ORDER BY name`,
 		shopID,
 	)
@@ -34,12 +34,13 @@ func (h *NotificationHandler) GetNotifications(w http.ResponseWriter, r *http.Re
 	today := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, now.Location())
 	for rows.Next() {
 		var id int64
-		var name, expiry string
-		var stock, minStock int
-		if err := rows.Scan(&id, &name, &stock, &minStock, &expiry); err != nil {
+		var name, unit, expiry string
+		var stock, minStock float64
+		if err := rows.Scan(&id, &name, &stock, &minStock, &unit, &expiry); err != nil {
 			writeError(w, http.StatusInternalServerError, err.Error())
 			return
 		}
+		unit = models.NormalizeProductUnit(unit)
 		if stock == 0 {
 			notifs = append(notifs, models.AppNotification{
 				ID: fmt.Sprintf("product:%d:low_stock", id), Type: "low_stock", Title: "Stok Habis",
@@ -48,7 +49,7 @@ func (h *NotificationHandler) GetNotifications(w http.ResponseWriter, r *http.Re
 		} else if stock <= minStock {
 			notifs = append(notifs, models.AppNotification{
 				ID: fmt.Sprintf("product:%d:low_stock", id), Type: "low_stock", Title: "Stok menipis",
-				Body: fmt.Sprintf("%s tersisa %d pcs.", name, stock), Time: "sekarang",
+				Body: fmt.Sprintf("%s tersisa %g %s.", name, stock, unit), Time: "sekarang",
 			})
 		}
 		if expiry != "" {

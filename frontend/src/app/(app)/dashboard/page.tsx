@@ -16,7 +16,7 @@ import {
 	type DashboardMetrics,
 	type AIInsight,
 } from "@/services/api";
-import { formatQty, formatRupiah } from "@/lib/format";
+import { formatQty, formatQtyWithUnit, formatRupiah } from "@/lib/format";
 
 const MIX_COLORS = ["#EA6C0C", "#FBA33C", "#354973", "#A1BD25", "#7F90BB", "#F98613", "#3D568F"];
 
@@ -72,8 +72,8 @@ export default function DashboardPage() {
     color: MIX_COLORS[i % MIX_COLORS.length],
   }));
 
-	const penjualanHariIni = metrics ? formatRupiah(metrics.today_income) : "—";
-	const totalTerjualHariIni = metrics ? String(metrics.products_sold) : "—";
+  const penjualanHariIni = metrics ? formatRupiah(metrics.today_income) : "—";
+  const totalTerjualHariIni = metrics ? formatQty(metrics.products_sold) : "—";
 	const barangTop = analytics?.top_products?.[0]?.name || "—";
 
   const lowStock = analytics?.reminders.filter((r) => r.type === "low_stock") || [];
@@ -155,7 +155,7 @@ export default function DashboardPage() {
                 className="grid grid-cols-[minmax(0,2fr)_minmax(0,1fr)_minmax(0,2fr)] items-center border-t border-secondary-600 px-4 py-2.5"
               >
                 <span className="text-xl text-black">{row.name}</span>
-                <span className="text-center text-xl text-black">{formatQty(row.qty)}</span>
+                <span className="text-center text-xl text-black">{formatQtyWithUnit(row.qty, row.unit)}</span>
                 <span className="text-right text-xl text-black">
                   {row.profit_str || formatRupiah(row.profit)}
                 </span>

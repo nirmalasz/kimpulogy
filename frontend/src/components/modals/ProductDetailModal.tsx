@@ -6,6 +6,7 @@ import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { Modal } from "@/components/ui/Modal";
 import { createSales } from "@/services/api";
+import { formatQtyWithUnit, quantityStep } from "@/lib/format";
 
 export type Product = {
   id: string;
@@ -13,6 +14,7 @@ export type Product = {
   category: string;
   price: number;
   stock: number;
+  unit?: string;
   sku?: string;
   barcode?: string;
   expiry_date?: string;
@@ -44,8 +46,13 @@ export function ProductDetailModal({
   if (!product) return null;
 
   const isLow = product.stock <= (product.min_stock || 10);
+  const step = quantityStep(product.unit);
 
   const handleSale = async () => {
+    if (quantity > product.stock) {
+      setError("Jumlah penjualan melebihi stok tersedia");
+      return;
+    }
     setSaving(true);
     setError(null);
     try {
@@ -61,7 +68,7 @@ export function ProductDetailModal({
 
   const close = () => {
     if (!saving) {
-      setQuantity(1);
+      setQuantity(step);
       setError(null);
       setDone(false);
       onClose();
@@ -83,8 +90,8 @@ export function ProductDetailModal({
               {formatRupiah(product.price)}
             </span>
           </div>
-          <Badge tone={isLow ? "warning" : "success"}>
-            Stok {product.stock}
+           <Badge tone={isLow ? "warning" : "success"}>
+             Stok {formatQtyWithUnit(product.stock, product.unit)}
           </Badge>
         </div>
 
@@ -96,7 +103,7 @@ export function ProductDetailModal({
           <span className="text-neutral-500">Kedaluwarsa</span>
           <span className="text-right font-medium text-fg-default">{product.expiry_date || "-"}</span>
           <span className="text-neutral-500">Stok Minimum</span>
-          <span className="text-right font-medium text-fg-default">{product.min_stock ?? 10}</span>
+          <span className="text-right font-medium text-fg-default">{formatQtyWithUnit(product.min_stock ?? 10, product.unit)}</span>
         </div>
 
         {done ? (
@@ -115,18 +122,19 @@ export function ProductDetailModal({
               <Button
                 variant="outline"
                 size="sm"
-                onClick={() => setQuantity((q) => Math.max(1, q - 1))}
+                 onClick={() => setQuantity((q) => Math.max(step, q - step))}
                 aria-label="Kurangi jumlah"
               >
                 <Minus className="h-4 w-4" />
               </Button>
               <span className="w-10 text-center text-lg font-bold text-fg-default">
-                {quantity}
+                 {formatQtyWithUnit(quantity, product.unit)}
               </span>
               <Button
                 variant="outline"
                 size="sm"
-                onClick={() => setQuantity((q) => q + 1)}
+                 disabled={quantity + step > product.stock}
+                 onClick={() => setQuantity((q) => Math.min(product.stock, q + step))}
                 aria-label="Tambah jumlah"
               >
                 <Plus className="h-4 w-4" />

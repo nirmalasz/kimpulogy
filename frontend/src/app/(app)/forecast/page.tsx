@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { Modal } from "@/components/ui/Modal";
 import { Input } from "@/components/ui/Input";
-import { formatQty } from "@/lib/format";
+import { formatQtyWithUnit, quantityStep } from "@/lib/format";
 import {
   getForecastRestock,
   createPurchase,
@@ -76,7 +76,9 @@ export default function ForecastPage() {
   const confirmRestock = async () => {
     if (!target) return;
     const n = Number(qty);
-    if (!Number.isFinite(n) || n <= 0) {
+    const step = quantityStep(target.unit);
+    const stepAligned = Math.abs(n / step - Math.round(n / step)) < 0.000001;
+    if (!Number.isFinite(n) || n <= 0 || !stepAligned) {
       setToast("Jumlah harus angka lebih dari 0");
       return;
     }
@@ -197,9 +199,11 @@ export default function ForecastPage() {
                     <span className="truncate font-semibold text-fg-default">{rec.name}</span>
                     {rec.sku ? <span className="truncate text-xs text-neutral-500">{rec.sku}</span> : null}
                   </div>
-                  <span className="text-center text-fg-text">{rec.current_stock}</span>
-                  <span className="text-center text-fg-text">{formatQty(rec.forecast_7d)}</span>
-                  <span className="text-center font-bold text-secondary-600">{rec.recommended_restock}</span>
+                  <span className="text-center text-fg-text">{formatQtyWithUnit(rec.current_stock, rec.unit)}</span>
+                  <span className="text-center text-fg-text">{formatQtyWithUnit(rec.forecast_7d, rec.unit)}</span>
+                  <span className="text-center font-bold text-secondary-600">
+                    {formatQtyWithUnit(rec.recommended_restock, rec.unit)}
+                  </span>
                   <span className="flex justify-center">
                     <span className={`inline-block rounded-full px-3 py-1 text-xs font-semibold ${meta.badge}`}>
                       {meta.label}
@@ -238,7 +242,7 @@ export default function ForecastPage() {
                   />
                 </div>
                 <span className="w-16 text-right text-sm font-bold text-fg-default">
-                  {formatQty(rec.forecast_7d)}
+                   {formatQtyWithUnit(rec.forecast_7d, rec.unit)}
                 </span>
               </div>
             ))}
@@ -270,14 +274,16 @@ export default function ForecastPage() {
           <div className="flex flex-col gap-5">
             <div className="grid grid-cols-2 gap-3 rounded-xl bg-bg-subtle p-4 text-sm">
               <span className="text-neutral-500">Stok saat ini</span>
-              <span className="text-right font-medium text-fg-default">{target.current_stock}</span>
+              <span className="text-right font-medium text-fg-default">
+                {formatQtyWithUnit(target.current_stock, target.unit)}
+              </span>
               <span className="text-neutral-500">Rekomendasi</span>
               <span className="text-right font-medium text-secondary-600">
-                {target.recommended_restock}
+                {formatQtyWithUnit(target.recommended_restock, target.unit)}
               </span>
               <span className="text-neutral-500">Perkiraan kebutuhan 7 hari</span>
               <span className="text-right font-medium text-fg-default">
-                {formatQty(target.forecast_7d)}
+                 {formatQtyWithUnit(target.forecast_7d, target.unit)}
               </span>
             </div>
             <Input
@@ -286,6 +292,7 @@ export default function ForecastPage() {
               min={1}
               value={qty}
               onChange={(e) => setQty(e.target.value)}
+              step={quantityStep(target.unit)}
               placeholder="Masukkan jumlah"
             />
             <div className="flex gap-3">

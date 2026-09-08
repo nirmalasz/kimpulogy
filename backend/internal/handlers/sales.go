@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"encoding/json"
 	"fmt"
+	"math"
 	"net/http"
 	"time"
 
@@ -38,7 +39,7 @@ func (h *SalesHandler) CreateSales(w http.ResponseWriter, r *http.Request) {
 	todayDisplay := time.Now().Format("02 Jan 2006")
 	var totalAmount float64
 	salesCreated := 0
-	updatedStock := map[int64]int{}
+	updatedStock := map[int64]float64{}
 
 	for _, item := range req.Items {
 		if item.ProductID <= 0 || item.Quantity <= 0 {
@@ -46,15 +47,24 @@ func (h *SalesHandler) CreateSales(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		var price float64
-		var stock int
-		err := tx.QueryRow("SELECT price, stock FROM products WHERE id = ? AND shop_id = ?", item.ProductID, shopID).
-			Scan(&price, &stock)
+		var price, stock float64
+		var unit string
+		err := tx.QueryRow("SELECT price, stock, COALESCE(unit, 'pcs') FROM products WHERE id = ? AND shop_id = ?", item.ProductID, shopID).
+			Scan(&price, &stock, &unit)
 		if err == sql.ErrNoRows {
 			writeError(w, http.StatusNotFound, "product not found")
 			return
 		} else if err != nil {
 			writeError(w, http.StatusInternalServerError, err.Error())
+			return
+		}
+		unit = models.NormalizeProductUnit(unit)
+		if !models.ProductQuantityValid(item.Quantity, unit) || (models.ProductUnitIsDiscrete(unit) && math.Trunc(item.Quantity) != item.Quantity) {
+			writeError(w, http.StatusBadRequest, fmt.Sprintf("quantity for %s must be a whole number", unit))
+			return
+		}
+		if item.Quantity > stock {
+			writeError(w, http.StatusConflict, fmt.Sprintf("insufficient stock: available %.2f %s", stock, unit))
 			return
 		}
 
@@ -69,10 +79,7 @@ func (h *SalesHandler) CreateSales(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		newStock := stock - int(item.Quantity)
-		if newStock < 0 {
-			newStock = 0
-		}
+		newStock := stock - item.Quantity
 		if _, err := tx.Exec(
 			"UPDATE products SET stock = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ? AND shop_id = ?",
 			newStock, item.ProductID, shopID,
@@ -127,15 +134,21 @@ func (h *SalesHandler) CreatePurchase(w http.ResponseWriter, r *http.Request) {
 	}
 	defer tx.Rollback()
 
-	var stock int
+	var stock float64
 	var price float64
-	err = tx.QueryRow("SELECT stock, price FROM products WHERE id = ? AND shop_id = ?", req.ProductID, shopID).
-		Scan(&stock, &price)
+	var unit string
+	err = tx.QueryRow("SELECT stock, price, COALESCE(unit, 'pcs') FROM products WHERE id = ? AND shop_id = ?", req.ProductID, shopID).
+		Scan(&stock, &price, &unit)
 	if err == sql.ErrNoRows {
 		writeError(w, http.StatusNotFound, "product not found")
 		return
 	} else if err != nil {
 		writeError(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	unit = models.NormalizeProductUnit(unit)
+	if !models.ProductQuantityValid(req.Quantity, unit) || (models.ProductUnitIsDiscrete(unit) && math.Trunc(req.Quantity) != req.Quantity) {
+		writeError(w, http.StatusBadRequest, fmt.Sprintf("quantity for %s must be a whole number", unit))
 		return
 	}
 
@@ -154,7 +167,7 @@ func (h *SalesHandler) CreatePurchase(w http.ResponseWriter, r *http.Request) {
 	}
 	purchaseID, _ := res.LastInsertId()
 
-	newStock := stock + int(req.Quantity)
+	newStock := stock + req.Quantity
 	if _, err := tx.Exec(
 		"UPDATE products SET stock = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ? AND shop_id = ?",
 		newStock, req.ProductID, shopID,

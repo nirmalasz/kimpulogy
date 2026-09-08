@@ -17,7 +17,10 @@ type ProductFormValues = {
   barcode: string;
   expiry_date: string;
   min_stock: string;
+  unit: string;
 };
+
+const PRODUCT_UNITS = ["pcs", "pack", "box", "bottle", "kg", "g", "liter", "ml"];
 
 const emptyValues: ProductFormValues = {
   name: "",
@@ -29,6 +32,7 @@ const emptyValues: ProductFormValues = {
   barcode: "",
   expiry_date: "",
   min_stock: "10",
+  unit: "pcs",
 };
 
 function fromProduct(p: Product | null | undefined): ProductFormValues {
@@ -43,6 +47,7 @@ function fromProduct(p: Product | null | undefined): ProductFormValues {
     barcode: p.barcode || "",
     expiry_date: p.expiry_date || "",
     min_stock: p.min_stock ? String(p.min_stock) : "10",
+    unit: p.unit || "pcs",
   };
 }
 
@@ -113,6 +118,7 @@ function ProductForm({
         barcode: values.barcode.trim(),
         expiry_date: values.expiry_date || "",
         min_stock: Number(values.min_stock) || 10,
+        unit: values.unit,
       });
     } catch (err) {
       setError(err instanceof Error ? err.message : "Gagal menyimpan produk");
@@ -201,6 +207,17 @@ function ProductForm({
           value={values.min_stock}
           onChange={set("min_stock")}
         />
+      </div>
+      <div className="flex flex-col gap-1.5">
+        <label htmlFor="product-unit" className="text-sm font-semibold text-fg-text">Satuan</label>
+        <select
+          id="product-unit"
+          value={values.unit}
+          onChange={(e) => setValues((prev) => ({ ...prev, unit: e.target.value }))}
+          className="h-12 rounded-xl border border-fg-line bg-bg-default px-4 text-base text-fg-default focus:border-primary-300 focus:outline-none"
+        >
+          {PRODUCT_UNITS.map((unit) => <option key={unit} value={unit}>{unit}</option>)}
+        </select>
       </div>
       <div className="flex gap-3">
         <Button type="button" variant="outline" size="lg" onClick={onCancel}>

@@ -87,7 +87,7 @@ func (h *ChatbotHandler) answerStock(shopID int64) string {
 	_ = h.DB.QueryRow("SELECT COUNT(*) FROM products WHERE shop_id = ?", shopID).Scan(&total)
 
 	rows, err := h.DB.Query(
-		"SELECT name, stock FROM products WHERE shop_id = ? AND stock <= min_stock ORDER BY stock ASC LIMIT 3",
+		"SELECT name, stock, COALESCE(unit, 'pcs') FROM products WHERE shop_id = ? AND stock <= min_stock ORDER BY stock ASC LIMIT 3",
 		shopID,
 	)
 	if err != nil {
@@ -97,10 +97,10 @@ func (h *ChatbotHandler) answerStock(shopID int64) string {
 
 	var items []string
 	for rows.Next() {
-		var name string
-		var stock int
-		if err := rows.Scan(&name, &stock); err == nil {
-			items = append(items, fmt.Sprintf("%s (%d pcs)", name, stock))
+		var name, unit string
+		var stock float64
+		if err := rows.Scan(&name, &stock, &unit); err == nil {
+			items = append(items, fmt.Sprintf("%s (%g %s)", name, stock, models.NormalizeProductUnit(unit)))
 		}
 	}
 
@@ -120,7 +120,7 @@ func (h *ChatbotHandler) answerFinance(shopID int64) string {
 
 func (h *ChatbotHandler) answerRestock(shopID int64) string {
 	rows, err := h.DB.Query(
-		"SELECT name, stock, min_stock FROM products WHERE shop_id = ? AND stock <= min_stock ORDER BY stock ASC LIMIT 3",
+		"SELECT name, stock, min_stock, COALESCE(unit, 'pcs') FROM products WHERE shop_id = ? AND stock <= min_stock ORDER BY stock ASC LIMIT 3",
 		shopID,
 	)
 	if err != nil {
@@ -130,14 +130,14 @@ func (h *ChatbotHandler) answerRestock(shopID int64) string {
 
 	var items []string
 	for rows.Next() {
-		var name string
-		var stock, min int
-		if err := rows.Scan(&name, &stock, &min); err == nil {
+		var name, unit string
+		var stock, min float64
+		if err := rows.Scan(&name, &stock, &min, &unit); err == nil {
 			rec := min - stock
 			if rec < 0 {
 				rec = 0
 			}
-			items = append(items, fmt.Sprintf("%s: tambah %d", name, rec))
+			items = append(items, fmt.Sprintf("%s: tambah %g %s", name, rec, models.NormalizeProductUnit(unit)))
 		}
 	}
 

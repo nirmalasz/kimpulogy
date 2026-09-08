@@ -59,11 +59,12 @@ func createTables(db *sql.DB) error {
 			category TEXT NOT NULL,
 			price REAL NOT NULL,
 			cost REAL NOT NULL DEFAULT 0,
-			stock INTEGER NOT NULL DEFAULT 0,
+			stock REAL NOT NULL DEFAULT 0,
+			unit TEXT NOT NULL DEFAULT 'pcs',
 			sku TEXT,
 			barcode TEXT,
 			expiry_date TEXT,
-			min_stock INTEGER NOT NULL DEFAULT 10,
+			min_stock REAL NOT NULL DEFAULT 10,
 			created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
 			updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
 			FOREIGN KEY (shop_id) REFERENCES shops(id)
@@ -147,6 +148,7 @@ func migrate(db *sql.DB) error {
 		{"products", "barcode", "ALTER TABLE products ADD COLUMN barcode TEXT"},
 		{"products", "expiry_date", "ALTER TABLE products ADD COLUMN expiry_date TEXT"},
 		{"products", "min_stock", "ALTER TABLE products ADD COLUMN min_stock INTEGER NOT NULL DEFAULT 10"},
+		{"products", "unit", "ALTER TABLE products ADD COLUMN unit TEXT NOT NULL DEFAULT 'pcs'"},
 		{"sales", "shop_id", "ALTER TABLE sales ADD COLUMN shop_id INTEGER NOT NULL DEFAULT 1"},
 		{"purchases", "shop_id", "ALTER TABLE purchases ADD COLUMN shop_id INTEGER NOT NULL DEFAULT 1"},
 		{"transactions", "shop_id", "ALTER TABLE transactions ADD COLUMN shop_id INTEGER NOT NULL DEFAULT 1"},
@@ -356,13 +358,13 @@ func seedInitialData(db *sql.DB) error {
 
 		// Base daily demand per product (approximate for a small warung)
 		bases := map[string]float64{
-			"Seblak Ceker":        5,
-			"Indomie Goreng":      4,
-			"Es Teh Manis":        9,
-			"Kerupuk":             6,
-			"Seblak Basah":        2,
+			"Seblak Ceker":         5,
+			"Indomie Goreng":       4,
+			"Es Teh Manis":         9,
+			"Kerupuk":              6,
+			"Seblak Basah":         2,
 			"Minyak Goreng Bimoli": 1,
-			"Sirup Marjan":        1,
+			"Sirup Marjan":         1,
 		}
 
 		// 70 days of history with weekday lift + deterministic noise

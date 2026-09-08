@@ -55,7 +55,7 @@ func (h *ForecastHandler) GetRestock(w http.ResponseWriter, r *http.Request) {
 	}
 
 	rows, err := h.DB.Query(
-		"SELECT id, name, COALESCE(sku,''), stock, min_stock FROM products WHERE shop_id = ? ORDER BY name",
+		"SELECT id, name, COALESCE(sku,''), stock, min_stock, COALESCE(unit, 'pcs') FROM products WHERE shop_id = ? ORDER BY name",
 		shopID,
 	)
 	if err != nil {
@@ -67,9 +67,10 @@ func (h *ForecastHandler) GetRestock(w http.ResponseWriter, r *http.Request) {
 	recs := make([]models.RestockRecommendation, 0, 8)
 	for rows.Next() {
 		var rec models.RestockRecommendation
-		if err := rows.Scan(&rec.ProductID, &rec.Name, &rec.SKU, &rec.CurrentStock, &rec.MinStock); err != nil {
+		if err := rows.Scan(&rec.ProductID, &rec.Name, &rec.SKU, &rec.CurrentStock, &rec.MinStock, &rec.Unit); err != nil {
 			continue
 		}
+		rec.Unit = models.NormalizeProductUnit(rec.Unit)
 
 		label, ok := matchModelLabel(rec.Name, h.Model)
 		if ok {
@@ -80,7 +81,12 @@ func (h *ForecastHandler) GetRestock(w http.ResponseWriter, r *http.Request) {
 			rec.P907D = p90
 			rec.Confidence = pm.Confidence()
 			rec.InModel = true
-			rec.Recommended = int(math.Ceil(p90 - float64(rec.CurrentStock)))
+			rec.Recommended = p90 - rec.CurrentStock
+			if models.ProductUnitIsDiscrete(rec.Unit) {
+				rec.Recommended = math.Ceil(rec.Recommended)
+			} else {
+				rec.Recommended = math.Round(rec.Recommended*100) / 100
+			}
 			if rec.Recommended < 0 {
 				rec.Recommended = 0
 			}
@@ -91,6 +97,11 @@ func (h *ForecastHandler) GetRestock(w http.ResponseWriter, r *http.Request) {
 			rec.InModel = false
 			rec.Confidence = "low"
 			rec.Recommended = rec.MinStock - rec.CurrentStock
+			if models.ProductUnitIsDiscrete(rec.Unit) {
+				rec.Recommended = math.Ceil(rec.Recommended)
+			} else {
+				rec.Recommended = math.Round(rec.Recommended*100) / 100
+			}
 			if rec.Recommended < 0 {
 				rec.Recommended = 0
 			}
