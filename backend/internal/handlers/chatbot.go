@@ -7,11 +7,13 @@ import (
 	"net/http"
 	"strings"
 
+	"kimpulogy/backend/internal/ai"
 	"kimpulogy/backend/internal/models"
 )
 
 type ChatbotHandler struct {
 	DB *sql.DB
+	AI *ai.Service
 }
 
 // HandleMessage answers with rule-based "Ari". Stateless for now; intent is
@@ -19,6 +21,7 @@ type ChatbotHandler struct {
 func (h *ChatbotHandler) HandleMessage(w http.ResponseWriter, r *http.Request) {
 	shopID := shopIDFrom(r)
 
+	r.Body = http.MaxBytesReader(w, r.Body, 16<<10)
 	var req models.ChatbotRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		writeError(w, http.StatusBadRequest, "invalid request body: "+err.Error())
@@ -28,6 +31,17 @@ func (h *ChatbotHandler) HandleMessage(w http.ResponseWriter, r *http.Request) {
 	if msg == "" {
 		writeError(w, http.StatusBadRequest, "message cannot be empty")
 		return
+	}
+	if len(req.Message) > 2000 {
+		writeError(w, http.StatusBadRequest, "message is too long")
+		return
+	}
+	if h.AI != nil && h.AI.Enabled() {
+		if reply, sessionID, err := h.AI.Chat(r.Context(), shopID, userIDFrom(r), req.SessionID, req.Message); err == nil {
+			w.Header().Set("Content-Type", "application/json")
+			_ = json.NewEncoder(w).Encode(models.ChatbotResponse{Reply: reply, SessionID: sessionID, Source: "gemini"})
+			return
+		}
 	}
 
 	var reply string
@@ -47,7 +61,7 @@ func (h *ChatbotHandler) HandleMessage(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.Header().Set("Content-Type", "application/json")
-	_ = json.NewEncoder(w).Encode(models.ChatbotResponse{Reply: reply})
+	_ = json.NewEncoder(w).Encode(models.ChatbotResponse{Reply: reply, SessionID: req.SessionID, Source: "rule_based"})
 }
 
 func (h *ChatbotHandler) answerStock(shopID int64) string {

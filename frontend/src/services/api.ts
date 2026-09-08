@@ -98,6 +98,15 @@ export interface DashboardAnalytics {
   today_expense: number;
 }
 
+export interface AIInsight {
+  summary: string;
+  observations: string[];
+  actions: string[];
+  confidence: "low" | "medium" | "high";
+  period: string;
+  generated_at: string;
+}
+
 export interface FinanceComponent {
   label: string;
   value: number;
@@ -312,11 +321,32 @@ export function getNotifications(): Promise<NotificationsResponse> {
 
 // --- Chatbot ---
 
-export function sendChatbotMessage(message: string): Promise<{ reply: string }> {
-  return request("/chatbot/message", {
+const CHAT_SESSION_KEY = "larisin_chat_session";
+
+export async function sendChatbotMessage(message: string): Promise<{
+  reply: string;
+  session_id?: string;
+  source?: string;
+}> {
+  const sessionId = typeof window === "undefined"
+    ? undefined
+    : window.sessionStorage.getItem(CHAT_SESSION_KEY) || undefined;
+  const response = await request<{
+    reply: string;
+    session_id?: string;
+    source?: string;
+  }>("/chatbot/message", {
     method: "POST",
-    body: JSON.stringify({ message }),
+    body: JSON.stringify({ message, session_id: sessionId }),
   });
+  if (typeof window !== "undefined" && response.session_id) {
+    window.sessionStorage.setItem(CHAT_SESSION_KEY, response.session_id);
+  }
+  return response;
+}
+
+export function getDashboardInsight(): Promise<AIInsight> {
+  return request("/dashboard/insights");
 }
 
 // --- Product update/delete ---

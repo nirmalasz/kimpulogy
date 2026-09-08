@@ -68,28 +68,20 @@ const handleAddTransaction = async (payload: CreateTransactionPayload) => {
   const comp = (prefix: string) =>
     components.find((c) => c.label.startsWith(prefix))?.value ?? 0;
   const omset = comp("Total Pemasukan");
-  const hpp = Math.abs(comp("HPP"));
+  const hpp = Math.abs(components.find((c) => c.label.includes("HPP"))?.value ?? 0);
   const gross = comp("Laba Kotor");
   const biaya = Math.abs(comp("Biaya Operasional"));
   const net = comp("Laba Bersih");
 
-  const kpiCards = components.length > 0
-    ? [
-        { label: "Total Pengeluaran", value: formatRupiah(biaya), caption: "Biaya Operasional" },
-        { label: "Gross Margin", value: formatRupiah(omset), caption: "Total Pemasukan" },
-        { label: "Keuntungan Kotor", value: formatRupiah(gross), caption: "Laba Kotor" },
-        { label: "Nett Profit", value: formatRupiah(net), caption: "Laba Bersih" },
-      ]
-    : [
-        { label: "Total Pengeluaran", value: "Rp 8.000.000", caption: "Biaya Operasional" },
-        { label: "Gross Margin", value: "Rp 10.000.000", caption: "Total Pemasukan" },
-        { label: "Keuntungan Kotor", value: "Rp 6.000.000", caption: "Laba Kotor" },
-        { label: "Nett Profit", value: "Rp 1.097.000", caption: "Laba Bersih" },
-      ];
+  const kpiValue = (value: number) => components.length > 0 ? formatRupiah(value) : loading ? "…" : "—";
+  const kpiCards = [
+    { label: "Total Pengeluaran", value: kpiValue(biaya), caption: "Biaya Operasional" },
+    { label: "Total Pemasukan", value: kpiValue(omset), caption: "Omset" },
+    { label: "Keuntungan Kotor", value: kpiValue(gross), caption: "Laba Kotor" },
+    { label: "Nett Profit", value: kpiValue(net), caption: "Laba Bersih" },
+  ];
 
-  const componentValues = components.length > 0
-    ? [Math.max(0, omset), hpp, Math.max(0, gross), biaya]
-    : [18_000_000, 8_000_000, 10_000_000, 5_200_000];
+  const componentValues = [Math.max(0, omset), hpp, Math.max(0, gross), biaya];
   const componentTotal = componentValues.reduce((sum, value) => sum + value, 0);
   const componentPercentages = componentTotal > 0
     ? componentValues.map((value) => (value / componentTotal) * 100)
@@ -103,11 +95,13 @@ const handleAddTransaction = async (payload: CreateTransactionPayload) => {
     .forEach(({ index }) => {
       roundedComponentPercentages[index] += 1;
     });
-  const componentSlices: DonutSlice[] = componentPercentages.map((_, index) => ({
+  const componentSlices: DonutSlice[] = components.length > 0
+    ? componentPercentages.map((_, index) => ({
     label: ["Total Pemasukan (Omset)", "HPP", "Laba Kotor", "Biaya Operasional"][index],
     value: roundedComponentPercentages[index],
     color: MIX_COLORS[index],
-  }));
+    }))
+    : [];
 
   const masuk = transactions.filter((tx) => tx.type === "Masuk");
   const keluar = transactions.filter((tx) => tx.type === "Keluar");
@@ -291,18 +285,12 @@ const handleAddTransaction = async (payload: CreateTransactionPayload) => {
             </span>
           </div>
           <div className="flex flex-col">
-            {(components.length > 0 ? components : [
-              { label: "Total Pemasukan (Omset)", value: 18_000_000 },
-              { label: "Harga Pokok Penjualan (HPP)", value: -8_000_000 },
-              { label: "Laba Kotor (Gross Profit)", value: 10_000_000 },
-              { label: "Biaya Operasional (Listrik, karyawan)", value: -5_200_000 },
-              { label: "Laba Bersih (Nett profit)", value: 4_800_000 },
-            ]).map((row, index) => (
+            {components.map((row, index) => (
               <div
                 key={row.label}
                 className={[
                   "flex items-center justify-between gap-4 px-4 py-2.5",
-                  index < (components.length || 5) - 1 ? "border-b border-fg-line" : "",
+                  index < components.length - 1 ? "border-b border-fg-line" : "",
                   row.label.startsWith("Laba Bersih") ? "bg-secondary-100 font-bold" : "",
                 ].join(" ")}
               >
@@ -327,6 +315,11 @@ const handleAddTransaction = async (payload: CreateTransactionPayload) => {
                 </span>
               </div>
             ))}
+            {components.length === 0 ? (
+              <p className="p-6 text-center text-sm text-neutral-500">
+                {loading ? "Memuat komponen keuangan..." : "Komponen keuangan belum tersedia."}
+              </p>
+            ) : null}
           </div>
         </Card>
 
@@ -334,7 +327,13 @@ const handleAddTransaction = async (payload: CreateTransactionPayload) => {
           <h2 className="text-lg font-bold font-heading text-fg-default">
             Komponen Keuangan
           </h2>
-          <DonutChart slices={componentSlices} />
+          {componentSlices.length > 0 ? (
+            <DonutChart slices={componentSlices} />
+          ) : (
+            <p className="py-8 text-center text-sm text-neutral-500">
+              {loading ? "Memuat komponen keuangan..." : "Data komponen belum tersedia."}
+            </p>
+          )}
         </Card>
       </div>
 

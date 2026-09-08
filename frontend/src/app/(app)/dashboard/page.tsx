@@ -8,15 +8,23 @@ import { SalesCompareChart } from "@/components/charts/SalesCompareChart";
 import { DonutChart, type DonutSlice } from "@/components/charts/DonutChart";
 import { QuickScanModal } from "@/components/modals/QuickScanModal";
 import {
-  getDashboardAnalytics,
-  type DashboardAnalytics,
+	getDashboardAnalytics,
+	getDashboardInsight,
+	getDashboardMetrics,
+	type DashboardAnalytics,
+	type DashboardMetrics,
+	type AIInsight,
 } from "@/services/api";
 import { formatQty, formatRupiah } from "@/lib/format";
 
 const MIX_COLORS = ["#EA6C0C", "#FBA33C", "#354973", "#A1BD25", "#7F90BB", "#F98613", "#3D568F"];
 
 export default function DashboardPage() {
-  const [analytics, setAnalytics] = useState<DashboardAnalytics | null>(null);
+	const [analytics, setAnalytics] = useState<DashboardAnalytics | null>(null);
+	const [metrics, setMetrics] = useState<DashboardMetrics | null>(null);
+	const [insight, setInsight] = useState<AIInsight | null>(null);
+	const [insightError, setInsightError] = useState<string | null>(null);
+	const [insightLoading, setInsightLoading] = useState(true);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [scanOpen, setScanOpen] = useState(false);
@@ -25,18 +33,36 @@ export default function DashboardPage() {
     setLoading(true);
     setError(null);
     try {
-      const data = await getDashboardAnalytics();
-      setAnalytics(data);
+		const [analyticsData, metricsData] = await Promise.all([
+			getDashboardAnalytics(),
+			getDashboardMetrics(),
+		]);
+		setAnalytics(analyticsData);
+		setMetrics(metricsData);
     } catch (err: any) {
       setError(err?.message || "Gagal memuat metrics");
     } finally {
       setLoading(false);
     }
-  };
+	};
 
-  useEffect(() => {
-    loadAnalytics();
-  }, []);
+	const loadInsight = async () => {
+		setInsightLoading(true);
+		setInsightError(null);
+		try {
+			setInsight(await getDashboardInsight());
+		} catch (err) {
+			setInsight(null);
+			setInsightError(err instanceof Error ? err.message : "Insight belum tersedia");
+		} finally {
+			setInsightLoading(false);
+		}
+	};
+
+	useEffect(() => {
+		void loadAnalytics();
+		void loadInsight();
+	}, []);
 
   const donutSlices: DonutSlice[] = (analytics?.weekly_mix || []).map((item, i) => ({
     label: item.label,
@@ -44,11 +70,9 @@ export default function DashboardPage() {
     color: MIX_COLORS[i % MIX_COLORS.length],
   }));
 
-  const penjualanHariIni = analytics ? formatRupiah(analytics.today_income) : "Rp 666.000";
-  const totalTerjualHariIni = analytics
-    ? String(Math.round(analytics.this_week.reduce((sum, p) => sum + p.qty, 0)))
-    : "200";
-  const barangTop = analytics?.top_products?.[0]?.name || "Beras";
+	const penjualanHariIni = metrics ? formatRupiah(metrics.today_income) : "—";
+	const totalTerjualHariIni = metrics ? String(metrics.products_sold) : "—";
+	const barangTop = analytics?.top_products?.[0]?.name || "—";
 
   const lowStock = analytics?.reminders.filter((r) => r.type === "low_stock") || [];
   const expiring = analytics?.reminders.filter((r) => r.type === "expiring") || [];
@@ -62,7 +86,10 @@ export default function DashboardPage() {
         <div className="flex items-center gap-3">
           <Button
             variant="secondary"
-            onClick={loadAnalytics}
+						onClick={() => {
+							void loadAnalytics();
+							void loadInsight();
+						}}
             title="Refresh Data"
             aria-label="Refresh Data"
           >
@@ -77,7 +104,7 @@ export default function DashboardPage() {
 
       {error && (
         <div className="flex items-center justify-between rounded-xl bg-alert-bg p-4 text-sm text-alert-text">
-          <span>Backend belum aktif atau gagal dihubungi ({error}). Menampilkan data contoh.</span>
+			<span>Backend belum aktif atau gagal dihubungi ({error}).</span>
           <Button size="sm" variant="secondary" onClick={loadAnalytics}>
             Coba Lagi
           </Button>
@@ -116,12 +143,7 @@ export default function DashboardPage() {
             <span className="text-right">Keuntungan</span>
           </div>
           <div className="flex flex-col">
-            {(analytics?.top_products || [
-              { name: "Beras", qty: 60, profit: 100_000, profit_str: "Rp 100.000" },
-              { name: "Minyak", qty: 32, profit: 72_000, profit_str: "Rp 72.000" },
-              { name: "Gula", qty: 32, profit: 72_000, profit_str: "Rp 72.000" },
-              { name: "Tepung", qty: 32, profit: 72_000, profit_str: "Rp 72.000" },
-            ]).map((row) => (
+							{(analytics?.top_products || []).map((row) => (
               <div
                 key={row.name}
                 className="grid grid-cols-[minmax(0,2fr)_minmax(0,1fr)_minmax(0,2fr)] items-center border-t border-secondary-600 px-4 py-2.5"
@@ -132,7 +154,10 @@ export default function DashboardPage() {
                   {row.profit_str || formatRupiah(row.profit)}
                 </span>
               </div>
-            ))}
+							))}
+							{!loading && analytics?.top_products.length === 0 ? (
+								<p className="p-4 text-sm text-neutral-500">Belum ada data penjualan.</p>
+							) : null}
           </div>
         </Card>
 
@@ -153,14 +178,25 @@ export default function DashboardPage() {
           <DonutChart slices={donutSlices} />
         </Card>
 
-        <Card className="flex flex-col gap-2 rounded-xl bg-neutral-300 p-4 opacity-80">
+						<Card className="flex flex-col gap-3 rounded-xl bg-neutral-300 p-4">
           <h2 className="text-2xl font-bold font-heading text-secondary-600">
             Insights
           </h2>
-          <p className="text-lg text-primary-300">
-            Ringkasan AI tentang performa warung kamu akan muncul di sini. Fitur
-            ini segera hadir bersama asisten LARISIN.
-          </p>
+							{insightLoading ? <p className="text-sm text-neutral-500">Menganalisis data warung...</p> : null}
+							{insightError ? <p className="text-sm text-neutral-500">Insight belum tersedia: {insightError}</p> : null}
+							{insight ? (
+								<>
+									<p className="text-base text-fg-text">{insight.summary}</p>
+									{insight.observations.length > 0 ? (
+										<ul className="list-disc pl-5 text-sm text-fg-text">
+											{insight.observations.map((observation) => <li key={observation}>{observation}</li>)}
+										</ul>
+									) : null}
+									{insight.actions.length > 0 ? (
+										<p className="text-sm text-secondary-600">Saran: {insight.actions.join("; ")}</p>
+									) : null}
+								</>
+							) : null}
         </Card>
       </div>
 
@@ -176,7 +212,7 @@ export default function DashboardPage() {
               </span>
             ))
           ) : (
-            <span className="text-4xl font-bold font-heading text-secondary-600">Minyak</span>
+							<span className="text-4xl font-bold font-heading text-secondary-600">—</span>
           )}
         </div>
         <div className="flex flex-col gap-2 rounded-xl bg-primary-100 p-4">
@@ -190,12 +226,19 @@ export default function DashboardPage() {
               </span>
             ))
           ) : (
-            <span className="text-4xl font-bold font-heading text-secondary-600">Sirup</span>
+							<span className="text-4xl font-bold font-heading text-secondary-600">—</span>
           )}
         </div>
       </div>
 
-      <QuickScanModal open={scanOpen} onClose={() => setScanOpen(false)} onSaved={loadAnalytics} />
+      <QuickScanModal
+        open={scanOpen}
+        onClose={() => setScanOpen(false)}
+        onSaved={() => {
+          void loadAnalytics();
+          void loadInsight();
+        }}
+      />
     </div>
   );
 }

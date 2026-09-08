@@ -1,7 +1,7 @@
 ﻿"use client";
 
 import { useEffect, useState } from "react";
-import { Eye, Pencil, Plus, ScanLine, Search, RefreshCw, Trash2 } from "lucide-react";
+import { Download, Eye, Pencil, Plus, ScanLine, Search, RefreshCw, Trash2 } from "lucide-react";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
@@ -116,6 +116,40 @@ export default function StockPage() {
     setDetailOpen(true);
   };
 
+  const exportCSV = () => {
+    const esc = (value: string | number) => {
+      const raw = String(value);
+      const text = typeof value === "string" && /^[=+\-@]/.test(raw) ? `'${raw}` : raw;
+      return /[",\n\r]/.test(text) ? `"${text.replace(/"/g, '""')}"` : text;
+    };
+    const line = (cells: (string | number)[]) => cells.map(esc).join(",");
+    const rows = [
+      line(["Produk", "SKU", "Barcode", "Kategori", "Harga Jual (IDR)", "Harga Modal (IDR)", "Stok", "Stok Minimum", "Kedaluwarsa"]),
+      ...products.map((product) =>
+        line([
+          product.name,
+          product.sku || "",
+          product.barcode || "",
+          product.category || "",
+          product.price,
+          product.cost ?? 0,
+          product.stock,
+          product.min_stock ?? 10,
+          product.expiry_date || "",
+        ])
+      ),
+    ];
+    const blob = new Blob(["\uFEFF" + rows.join("\r\n")], { type: "text/csv;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const anchor = document.createElement("a");
+    anchor.href = url;
+    anchor.download = `daftar-stok-${new Date().toISOString().slice(0, 10)}.csv`;
+    document.body.appendChild(anchor);
+    anchor.click();
+    document.body.removeChild(anchor);
+    URL.revokeObjectURL(url);
+  };
+
   return (
     <div className="flex flex-col gap-6">
       <div className="flex flex-wrap items-center justify-between gap-4">
@@ -135,6 +169,10 @@ export default function StockPage() {
             aria-label="Refresh Data"
           >
             <RefreshCw className={`h-4 w-4 ${loading ? "animate-spin" : ""}`} />
+          </Button>
+          <Button variant="outline" onClick={exportCSV} disabled={loading || !!error}>
+            <Download className="h-5 w-5" />
+            Export CSV
           </Button>
           <Button variant="tertiary" onClick={() => setScanOpen(true)}>
             <ScanLine className="h-5 w-5" />

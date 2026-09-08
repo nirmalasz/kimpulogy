@@ -18,7 +18,7 @@ type ProductHandler struct {
 func (h *ProductHandler) GetProducts(w http.ResponseWriter, r *http.Request) {
 	shopID := shopIDFrom(r)
 	rows, err := h.DB.Query(
-		"SELECT id, name, category, price, cost, stock, COALESCE(sku, ''), COALESCE(expiry_date, ''), min_stock, created_at, updated_at FROM products WHERE shop_id = ? ORDER BY id ASC",
+		"SELECT id, name, category, price, cost, stock, COALESCE(sku, ''), COALESCE(barcode, ''), COALESCE(expiry_date, ''), min_stock, created_at, updated_at FROM products WHERE shop_id = ? ORDER BY id ASC",
 		shopID,
 	)
 	if err != nil {
@@ -31,7 +31,7 @@ func (h *ProductHandler) GetProducts(w http.ResponseWriter, r *http.Request) {
 	for rows.Next() {
 		var p models.Product
 		var createdStr, updatedStr string
-		if err := rows.Scan(&p.ID, &p.Name, &p.Category, &p.Price, &p.Cost, &p.Stock, &p.SKU, &p.ExpiryDate, &p.MinStock, &createdStr, &updatedStr); err != nil {
+		if err := rows.Scan(&p.ID, &p.Name, &p.Category, &p.Price, &p.Cost, &p.Stock, &p.SKU, &p.Barcode, &p.ExpiryDate, &p.MinStock, &createdStr, &updatedStr); err != nil {
 			continue
 		}
 		p.CreatedAt, _ = time.Parse("2006-01-02 15:04:05", createdStr)
@@ -59,9 +59,9 @@ func (h *ProductHandler) GetBySKU(w http.ResponseWriter, r *http.Request) {
 	var p models.Product
 	var createdStr, updatedStr string
 	err := h.DB.QueryRow(
-		"SELECT id, name, category, price, cost, stock, COALESCE(sku, ''), COALESCE(expiry_date, ''), min_stock, created_at, updated_at FROM products WHERE shop_id = ? AND (sku = ? OR barcode = ?) LIMIT 1",
+		"SELECT id, name, category, price, cost, stock, COALESCE(sku, ''), COALESCE(barcode, ''), COALESCE(expiry_date, ''), min_stock, created_at, updated_at FROM products WHERE shop_id = ? AND (sku = ? OR barcode = ?) LIMIT 1",
 		shopID, sku, sku,
-	).Scan(&p.ID, &p.Name, &p.Category, &p.Price, &p.Cost, &p.Stock, &p.SKU, &p.ExpiryDate, &p.MinStock, &createdStr, &updatedStr)
+	).Scan(&p.ID, &p.Name, &p.Category, &p.Price, &p.Cost, &p.Stock, &p.SKU, &p.Barcode, &p.ExpiryDate, &p.MinStock, &createdStr, &updatedStr)
 	if err == sql.ErrNoRows {
 		http.NotFound(w, r)
 		return
@@ -115,19 +115,19 @@ func (h *ProductHandler) CreateProduct(w http.ResponseWriter, r *http.Request) {
 
 	id, _ := res.LastInsertId()
 	product := models.Product{
-		ID:        id,
-		ShopID:    shopIDFrom(r),
-		Name:      req.Name,
-		Category:  req.Category,
-		Price:     req.Price,
-		Cost:      req.Cost,
-		Stock:     req.Stock,
-		SKU:       req.SKU,
-		Barcode:   req.Barcode,
+		ID:         id,
+		ShopID:     shopIDFrom(r),
+		Name:       req.Name,
+		Category:   req.Category,
+		Price:      req.Price,
+		Cost:       req.Cost,
+		Stock:      req.Stock,
+		SKU:        req.SKU,
+		Barcode:    req.Barcode,
 		ExpiryDate: req.ExpiryDate,
-		MinStock:  req.MinStock,
-		CreatedAt: time.Now(),
-		UpdatedAt: time.Now(),
+		MinStock:   req.MinStock,
+		CreatedAt:  time.Now(),
+		UpdatedAt:  time.Now(),
 	}
 
 	w.Header().Set("Content-Type", "application/json")
@@ -155,9 +155,9 @@ func (h *ProductHandler) HandleProductByID(w http.ResponseWriter, r *http.Reques
 		var p models.Product
 		var createdStr, updatedStr string
 		err := h.DB.QueryRow(
-			"SELECT id, name, category, price, cost, stock, COALESCE(sku, ''), COALESCE(expiry_date, ''), min_stock, created_at, updated_at FROM products WHERE id = ? AND shop_id = ?",
+			"SELECT id, name, category, price, cost, stock, COALESCE(sku, ''), COALESCE(barcode, ''), COALESCE(expiry_date, ''), min_stock, created_at, updated_at FROM products WHERE id = ? AND shop_id = ?",
 			id, shopIDFrom(r),
-		).Scan(&p.ID, &p.Name, &p.Category, &p.Price, &p.Cost, &p.Stock, &p.SKU, &p.ExpiryDate, &p.MinStock, &createdStr, &updatedStr)
+		).Scan(&p.ID, &p.Name, &p.Category, &p.Price, &p.Cost, &p.Stock, &p.SKU, &p.Barcode, &p.ExpiryDate, &p.MinStock, &createdStr, &updatedStr)
 		if err == sql.ErrNoRows {
 			http.NotFound(w, r)
 			return

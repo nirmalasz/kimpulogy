@@ -1,11 +1,13 @@
 package main
 
 import (
+	"context"
 	"log"
 	"net/http"
 	"os"
 	"strings"
 
+	"kimpulogy/backend/internal/ai"
 	"kimpulogy/backend/internal/database"
 	"kimpulogy/backend/internal/handlers"
 )
@@ -47,7 +49,12 @@ func main() {
 	authHandler := &handlers.AuthHandler{DB: db}
 	salesHandler := &handlers.SalesHandler{DB: db}
 	notificationHandler := &handlers.NotificationHandler{DB: db}
-	chatbotHandler := &handlers.ChatbotHandler{DB: db}
+	aiService, aiErr := ai.NewService(context.Background(), db)
+	if aiErr != nil {
+		log.Printf("AI service disabled: %v", aiErr)
+	}
+	chatbotHandler := &handlers.ChatbotHandler{DB: db, AI: aiService}
+	insightsHandler := &handlers.InsightsHandler{AI: aiService}
 	forecastHandler := &handlers.ForecastHandler{DB: db, Model: handlers.LoadForecastModel(), Horizon: 7}
 	settingsHandler := &handlers.SettingsHandler{DB: db}
 
@@ -141,6 +148,13 @@ func main() {
 			return
 		}
 		dashboardHandler.GetAnalytics(w, r)
+	}))
+	mux.HandleFunc("/api/v1/dashboard/insights", handlers.AuthRequired(func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodGet {
+			http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+			return
+		}
+		insightsHandler.Get(w, r)
 	}))
 
 	// Sales & purchases endpoints

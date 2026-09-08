@@ -103,14 +103,14 @@ type Order struct {
 }
 
 type DashboardMetrics struct {
-	TotalOrders   int      `json:"total_orders"`
-	TotalOmzet    float64  `json:"total_omzet"`
-	LowStockCount int      `json:"low_stock_count"`
-	RecentOrders  []Order  `json:"recent_orders"`
-	TodayOrders   int      `json:"today_orders"`
-	TodayIncome   float64  `json:"today_income"`
-	TodayExpense  float64  `json:"today_expense"`
-	ProductsSold  int      `json:"products_sold"`
+	TotalOrders   int     `json:"total_orders"`
+	TotalOmzet    float64 `json:"total_omzet"`
+	LowStockCount int     `json:"low_stock_count"`
+	RecentOrders  []Order `json:"recent_orders"`
+	TodayOrders   int     `json:"today_orders"`
+	TodayIncome   float64 `json:"today_income"`
+	TodayExpense  float64 `json:"today_expense"`
+	ProductsSold  int     `json:"products_sold"`
 }
 
 // --- Auth ---
@@ -216,8 +216,8 @@ type CreateSalesRequest struct {
 }
 
 type CreateSalesResponse struct {
-	SalesCreated int     `json:"sales_created"`
-	TotalAmount  float64 `json:"total_amount"`
+	SalesCreated int           `json:"sales_created"`
+	TotalAmount  float64       `json:"total_amount"`
 	UpdatedStock map[int64]int `json:"updated_stock"`
 }
 
@@ -228,9 +228,9 @@ type CreatePurchaseRequest struct {
 }
 
 type CreatePurchaseResponse struct {
-	PurchaseID  int64 `json:"id"`
-	ProductID   int64 `json:"product_id"`
-	NewStock    int   `json:"new_stock"`
+	PurchaseID int64 `json:"id"`
+	ProductID  int64 `json:"product_id"`
+	NewStock   int   `json:"new_stock"`
 }
 
 // --- Notifications ---
@@ -251,35 +251,47 @@ type NotificationsResponse struct {
 // --- Forecast ---
 
 type RestockRecommendation struct {
-	ProductID         int64   `json:"product_id"`
-	Name              string  `json:"name"`
-	SKU               string  `json:"sku"`
-	CurrentStock      int     `json:"current_stock"`
-	MinStock          int     `json:"min_stock"`
-	AvgDaily          float64 `json:"avg_daily"`
-	Forecast7D        float64 `json:"forecast_7d"`
-	P907D             float64 `json:"p90_7d"`
-	Recommended       int     `json:"recommended_restock"`
-	DaysToStockout    float64 `json:"days_to_stockout"`
-	Urgency           string  `json:"urgency"` // habis | urgent | soon | ok
-	Confidence        string  `json:"confidence"` // high | medium | low
-	InModel           bool    `json:"in_model"`
+	ProductID      int64   `json:"product_id"`
+	Name           string  `json:"name"`
+	SKU            string  `json:"sku"`
+	CurrentStock   int     `json:"current_stock"`
+	MinStock       int     `json:"min_stock"`
+	AvgDaily       float64 `json:"avg_daily"`
+	Forecast7D     float64 `json:"forecast_7d"`
+	P907D          float64 `json:"p90_7d"`
+	Recommended    int     `json:"recommended_restock"`
+	DaysToStockout float64 `json:"days_to_stockout"`
+	Urgency        string  `json:"urgency"`    // habis | urgent | soon | ok
+	Confidence     string  `json:"confidence"` // high | medium | low
+	InModel        bool    `json:"in_model"`
 }
 
 type RestockResponse struct {
-	Horizon      int                    `json:"horizon"`
-	ModelType    string                 `json:"model_type"`
-	Source       string                 `json:"source"`
-	TrainedAt    string                 `json:"trained_at"`
+	Horizon         int                     `json:"horizon"`
+	ModelType       string                  `json:"model_type"`
+	Source          string                  `json:"source"`
+	TrainedAt       string                  `json:"trained_at"`
 	Recommendations []RestockRecommendation `json:"recommendations"`
 }
 
 // --- Chatbot ---
 
 type ChatbotRequest struct {
-	Message string `json:"message"`
+	Message   string `json:"message"`
+	SessionID string `json:"session_id,omitempty"`
 }
 
 type ChatbotResponse struct {
-	Reply string `json:"reply"`
+	Reply     string `json:"reply"`
+	SessionID string `json:"session_id,omitempty"`
+	Source    string `json:"source,omitempty"`
+}
+
+type AIInsight struct {
+	Summary      string   `json:"summary"`
+	Observations []string `json:"observations"`
+	Actions      []string `json:"actions"`
+	Confidence   string   `json:"confidence"`
+	Period       string   `json:"period"`
+	GeneratedAt  string   `json:"generated_at"`
 }
