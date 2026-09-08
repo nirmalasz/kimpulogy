@@ -5,6 +5,7 @@ import { Bot, SendHorizonal } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { sendChatbotMessage } from "@/services/api";
+import { ChatMessageContent } from "@/components/chat/ChatMessageContent";
 
 type Message = {
   role: "user" | "bot";
@@ -84,7 +85,7 @@ export default function ChatbotPage() {
                     : "bg-neutral-100 text-fg-default rounded-bl-sm",
                 ].join(" ")}
               >
-                {message.text}
+                  <ChatMessageContent text={message.text} />
               </div>
             </div>
           ))}

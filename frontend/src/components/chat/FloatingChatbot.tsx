@@ -1,9 +1,9 @@
 "use client";
 
-import { usePathname } from "next/navigation";
 import { useState } from "react";
 import { Bot, MessageSquare, SendHorizonal, X } from "lucide-react";
 import { sendChatbotMessage } from "@/services/api";
+import { ChatMessageContent } from "./ChatMessageContent";
 
 type Message = {
   role: "user" | "bot";
@@ -11,7 +11,6 @@ type Message = {
 };
 
 export function FloatingChatbot() {
-  const pathname = usePathname();
   const [open, setOpen] = useState(false);
   const [messages, setMessages] = useState<Message[]>([
     {
@@ -21,8 +20,6 @@ export function FloatingChatbot() {
   ]);
   const [input, setInput] = useState("");
   const [sending, setSending] = useState(false);
-
-  if (pathname === "/chatbot") return null;
 
   const handleSend = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -87,7 +84,7 @@ export function FloatingChatbot() {
                       : "bg-neutral-100 text-fg-default rounded-bl-sm",
                   ].join(" ")}
                 >
-                  {message.text}
+                  <ChatMessageContent text={message.text} />
                 </div>
               </div>
             ))}
