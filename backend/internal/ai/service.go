@@ -62,19 +62,46 @@ type cachedInsight struct {
 }
 
 func NewService(ctx context.Context, db *sql.DB) (*Service, error) {
-	key := os.Getenv("GEMINI_API_KEY")
-	if key == "" {
-		key = os.Getenv("GOOGLE_API_KEY")
-	}
-	if key == "" || strings.EqualFold(os.Getenv("AI_ENABLED"), "false") {
+	if strings.EqualFold(os.Getenv("AI_ENABLED"), "false") {
 		return &Service{enabled: false}, nil
+	}
+
+	authMode := strings.ToLower(os.Getenv("AI_AUTH_MODE"))
+	if authMode == "" {
+		authMode = "vertex"
+	}
+	clientConfig := &genai.ClientConfig{}
+	switch authMode {
+	case "vertex":
+		project := os.Getenv("GOOGLE_CLOUD_PROJECT")
+		if project == "" {
+			return nil, fmt.Errorf("GOOGLE_CLOUD_PROJECT is required for Vertex AI ADC")
+		}
+		location := os.Getenv("GOOGLE_CLOUD_LOCATION")
+		if location == "" {
+			location = "global"
+		}
+		clientConfig.Backend = genai.BackendVertexAI
+		clientConfig.Project = project
+		clientConfig.Location = location
+	case "api_key":
+		key := os.Getenv("GEMINI_API_KEY")
+		if key == "" {
+			key = os.Getenv("GOOGLE_API_KEY")
+		}
+		if key == "" {
+			return nil, fmt.Errorf("GEMINI_API_KEY or GOOGLE_API_KEY is required for API-key mode")
+		}
+		clientConfig.APIKey = key
+	default:
+		return nil, fmt.Errorf("unsupported AI_AUTH_MODE %q", authMode)
 	}
 
 	modelName := os.Getenv("GEMINI_MODEL")
 	if modelName == "" {
-		modelName = "gemini-flash-latest"
+		modelName = "gemini-3.1-flash-lite"
 	}
-	model, err := gemini.NewModel(ctx, modelName, &genai.ClientConfig{APIKey: key})
+	model, err := gemini.NewModel(ctx, modelName, clientConfig)
 	if err != nil {
 		return nil, fmt.Errorf("initialize Gemini model: %w", err)
 	}
