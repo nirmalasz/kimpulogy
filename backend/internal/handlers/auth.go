@@ -129,11 +129,11 @@ func (h *AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var id, shopID int64
-	var name, email, hash string
+	var name, email, hash, role, avatarURL, createdAt string
 	err := h.DB.QueryRow(
-		"SELECT id, shop_id, name, email, password_hash FROM users WHERE email = ?",
+		"SELECT id, shop_id, name, email, password_hash, role, COALESCE(avatar_url, ''), created_at FROM users WHERE email = ?",
 		strings.ToLower(strings.TrimSpace(req.Email)),
-	).Scan(&id, &shopID, &name, &email, &hash)
+	).Scan(&id, &shopID, &name, &email, &hash, &role, &avatarURL, &createdAt)
 	if err == sql.ErrNoRows {
 		writeError(w, http.StatusUnauthorized, "invalid email or password")
 		return
@@ -154,11 +154,13 @@ func (h *AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var shop models.Shop
-	var createdAt string
+	var shopCreatedAt string
 	_ = h.DB.QueryRow("SELECT id, name, address, created_at FROM shops WHERE id = ?", shopID).
-		Scan(&shop.ID, &shop.Name, &shop.Address, &createdAt)
+		Scan(&shop.ID, &shop.Name, &shop.Address, &shopCreatedAt)
 
-	user := models.User{ID: id, ShopID: shopID, Name: name, Email: email, Role: "owner", CreatedAt: time.Now()}
+	userCreatedTime, _ := time.Parse("2006-01-02 15:04:05", createdAt)
+	shop.CreatedAt, _ = time.Parse("2006-01-02 15:04:05", shopCreatedAt)
+	user := models.User{ID: id, ShopID: shopID, Name: name, Email: email, Role: role, AvatarURL: avatarURL, CreatedAt: userCreatedTime}
 
 	w.Header().Set("Content-Type", "application/json")
 	_ = json.NewEncoder(w).Encode(models.AuthResponse{Token: token, User: user, Shop: shop})
@@ -169,15 +171,34 @@ func (h *AuthHandler) Me(w http.ResponseWriter, r *http.Request) {
 	shopID := shopIDFrom(r)
 
 	var id, sid int64
-	var name, email string
-	var shopName, address string
-	_ = h.DB.QueryRow("SELECT id, shop_id, name, email FROM users WHERE id = ?", userID).
-		Scan(&id, &sid, &name, &email)
-	_ = h.DB.QueryRow("SELECT name, address FROM shops WHERE id = ?", shopID).
-		Scan(&shopName, &address)
+	var name, email, role, avatarURL, userCreatedAt string
+	if err := h.DB.QueryRow(
+		`SELECT id, shop_id, name, email, role, COALESCE(avatar_url, ''), created_at
+		 FROM users WHERE id = ? AND shop_id = ?`, userID, shopID,
+	).Scan(&id, &sid, &name, &email, &role, &avatarURL, &userCreatedAt); err != nil {
+		if err == sql.ErrNoRows {
+			writeError(w, http.StatusUnauthorized, "user not found")
+		} else {
+			writeError(w, http.StatusInternalServerError, "failed to load user")
+		}
+		return
+	}
 
-	user := models.User{ID: id, ShopID: sid, Name: name, Email: email, Role: "owner"}
-	shop := models.Shop{ID: sid, Name: shopName, Address: address}
+	var shopName, address, shopCreatedAt string
+	if err := h.DB.QueryRow("SELECT name, address, created_at FROM shops WHERE id = ?", shopID).
+		Scan(&shopName, &address, &shopCreatedAt); err != nil {
+		if err == sql.ErrNoRows {
+			writeError(w, http.StatusUnauthorized, "shop not found")
+		} else {
+			writeError(w, http.StatusInternalServerError, "failed to load shop")
+		}
+		return
+	}
+
+	userTime, _ := time.Parse("2006-01-02 15:04:05", userCreatedAt)
+	shopTime, _ := time.Parse("2006-01-02 15:04:05", shopCreatedAt)
+	user := models.User{ID: id, ShopID: sid, Name: name, Email: email, Role: role, AvatarURL: avatarURL, CreatedAt: userTime}
+	shop := models.Shop{ID: shopID, Name: shopName, Address: address, CreatedAt: shopTime}
 
 	w.Header().Set("Content-Type", "application/json")
 	_ = json.NewEncoder(w).Encode(models.AuthResponse{Token: "", User: user, Shop: shop})
