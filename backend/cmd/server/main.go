@@ -52,6 +52,10 @@ func main() {
 	aiService, aiErr := ai.NewService(context.Background(), db)
 	if aiErr != nil {
 		log.Printf("AI service disabled: %v", aiErr)
+	} else if aiService.Enabled() {
+		log.Printf("AI service enabled with model %s", aiService.ModelName())
+	} else {
+		log.Printf("AI service disabled: GEMINI_API_KEY/GOOGLE_API_KEY missing or AI_ENABLED=false")
 	}
 	chatbotHandler := &handlers.ChatbotHandler{DB: db, AI: aiService}
 	insightsHandler := &handlers.InsightsHandler{AI: aiService}

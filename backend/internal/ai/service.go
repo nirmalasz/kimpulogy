@@ -72,7 +72,7 @@ func NewService(ctx context.Context, db *sql.DB) (*Service, error) {
 
 	modelName := os.Getenv("GEMINI_MODEL")
 	if modelName == "" {
-		modelName = "gemini-3.1-flash-lite"
+		modelName = "gemini-flash-latest"
 	}
 	model, err := gemini.NewModel(ctx, modelName, &genai.ClientConfig{APIKey: key})
 	if err != nil {

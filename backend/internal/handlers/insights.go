@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"encoding/json"
+	"log"
 	"net/http"
 
 	"kimpulogy/backend/internal/ai"
@@ -18,6 +19,7 @@ func (h *InsightsHandler) Get(w http.ResponseWriter, r *http.Request) {
 	}
 	insight, err := h.AI.GenerateInsight(r.Context(), shopIDFrom(r), userIDFrom(r))
 	if err != nil {
+		log.Printf("AI insight request failed: %v", err)
 		writeError(w, http.StatusBadGateway, "AI insight unavailable")
 		return
 	}

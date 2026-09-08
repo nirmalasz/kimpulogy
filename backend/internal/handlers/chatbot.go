@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"encoding/json"
 	"fmt"
+	"log"
 	"net/http"
 	"strings"
 
@@ -41,6 +42,8 @@ func (h *ChatbotHandler) HandleMessage(w http.ResponseWriter, r *http.Request) {
 			w.Header().Set("Content-Type", "application/json")
 			_ = json.NewEncoder(w).Encode(models.ChatbotResponse{Reply: reply, SessionID: sessionID, Source: "gemini"})
 			return
+		} else {
+			log.Printf("AI chatbot request failed: %v", err)
 		}
 	}
 

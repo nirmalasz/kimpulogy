@@ -113,6 +113,7 @@ func (h *DashboardHandler) GetAnalytics(w http.ResponseWriter, r *http.Request) 
 	weekStart := now.AddDate(0, 0, -daysSinceMonday)
 	thisWeekStart := weekStart.Format("2006-01-02")
 	lastWeekStart := weekStart.AddDate(0, 0, -7).Format("2006-01-02")
+	mixStart := now.AddDate(0, 0, -6).Format("2006-01-02")
 	todayDate := now.Format("2006-01-02")
 
 	rows, err := h.DB.Query(
@@ -138,6 +139,9 @@ func (h *DashboardHandler) GetAnalytics(w http.ResponseWriter, r *http.Request) 
 		if _, err := time.Parse("2006-01-02", saleDate); err != nil {
 			continue
 		}
+		if saleDate >= mixStart {
+			mix[name] += qty
+		}
 		if saleDate >= thisWeekStart {
 			key := saleDate
 			a := thisAgg[key]
@@ -147,7 +151,6 @@ func (h *DashboardHandler) GetAnalytics(w http.ResponseWriter, r *http.Request) 
 			}
 			a.qty += qty
 			a.amount += amount
-			mix[name] += qty
 		} else if saleDate >= lastWeekStart {
 			key := saleDate
 			a := lastAgg[key]
