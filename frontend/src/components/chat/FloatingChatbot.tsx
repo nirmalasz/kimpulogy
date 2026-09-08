@@ -1,47 +1,25 @@
 "use client";
 
+import { usePathname } from "next/navigation";
 import { useState } from "react";
 import { Bot, MessageSquare, SendHorizonal, X } from "lucide-react";
-import { sendChatbotMessage } from "@/services/api";
 import { ChatMessageContent } from "./ChatMessageContent";
-
-type Message = {
-  role: "user" | "bot";
-  text: string;
-};
+import { useChatbot } from "./ChatbotProvider";
 
 export function FloatingChatbot() {
+  const pathname = usePathname();
+  const { messages, sending, sendMessage } = useChatbot();
   const [open, setOpen] = useState(false);
-  const [messages, setMessages] = useState<Message[]>([
-    {
-      role: "bot",
-      text: "Halo! Saya Ari, asisten LARISIN. Mau nanya apa?",
-    },
-  ]);
   const [input, setInput] = useState("");
-  const [sending, setSending] = useState(false);
+
+  if (pathname === "/chatbot") return null;
 
   const handleSend = async (e: React.FormEvent) => {
     e.preventDefault();
     const text = input.trim();
     if (!text || sending) return;
-    setMessages((prev) => [...prev, { role: "user", text }]);
     setInput("");
-    setSending(true);
-    try {
-      const res = await sendChatbotMessage(text);
-      setMessages((prev) => [...prev, { role: "bot", text: res.reply }]);
-    } catch (err) {
-      setMessages((prev) => [
-        ...prev,
-        {
-          role: "bot",
-          text: err instanceof Error ? err.message : "Kendala menghubungi Ari, coba lagi.",
-        },
-      ]);
-    } finally {
-      setSending(false);
-    }
+    await sendMessage(text);
   };
 
   return (

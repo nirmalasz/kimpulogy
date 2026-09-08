@@ -323,6 +323,12 @@ export function getNotifications(): Promise<NotificationsResponse> {
 
 const CHAT_SESSION_KEY = "larisin_chat_session";
 
+export function clearChatbotSession() {
+  if (typeof window !== "undefined") {
+    window.sessionStorage.removeItem(CHAT_SESSION_KEY);
+  }
+}
+
 export async function sendChatbotMessage(message: string): Promise<{
   reply: string;
   session_id?: string;

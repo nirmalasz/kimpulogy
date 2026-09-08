@@ -1,53 +1,23 @@
 "use client";
 
-import { useRef, useState } from "react";
-import { Bot, SendHorizonal } from "lucide-react";
+import { useState } from "react";
+import { Bot, RotateCcw, SendHorizonal } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
-import { sendChatbotMessage } from "@/services/api";
 import { ChatMessageContent } from "@/components/chat/ChatMessageContent";
-
-type Message = {
-  role: "user" | "bot";
-  text: string;
-};
-
-const initialMessages: Message[] = [
-  {
-    role: "bot",
-    text: "Halo! Saya Ari, asisten LARISIN. Tanya soal stok, omzet, restock, atau pesanan warung kamu.",
-  },
-];
+import { useChatbot } from "@/components/chat/ChatbotProvider";
 
 export default function ChatbotPage() {
-  const [messages, setMessages] = useState<Message[]>(initialMessages);
+  const { messages, sending, sendMessage, resetConversation } = useChatbot();
   const [input, setInput] = useState("");
-  const [sending, setSending] = useState(false);
-  const formRef = useRef<HTMLFormElement>(null);
 
   const handleSend = async (e: React.FormEvent) => {
     e.preventDefault();
     const text = input.trim();
     if (!text || sending) return;
 
-    setMessages((prev) => [...prev, { role: "user", text }]);
     setInput("");
-    setSending(true);
-
-    try {
-      const res = await sendChatbotMessage(text);
-      setMessages((prev) => [...prev, { role: "bot", text: res.reply }]);
-    } catch (err) {
-      setMessages((prev) => [
-        ...prev,
-        {
-          role: "bot",
-          text: err instanceof Error ? err.message : "Kendala menghubungi Ari, coba lagi.",
-        },
-      ]);
-    } finally {
-      setSending(false);
-    }
+    await sendMessage(text);
   };
 
   return (
@@ -56,16 +26,22 @@ export default function ChatbotPage() {
         Tanya Ari!
       </h1>
       <Card padded={false} className="flex h-[calc(100vh-220px)] min-h-[480px] flex-col">
-        <div className="flex items-center gap-3 border-b border-fg-line p-6">
-          <span className="flex h-10 w-10 items-center justify-center rounded-full bg-primary-100 text-primary-400">
-            <Bot className="h-5 w-5" />
-          </span>
-          <div className="flex flex-col">
-            <span className="font-bold font-heading text-fg-default">
-              Asisten LARISIN
+        <div className="flex items-center justify-between gap-3 border-b border-fg-line p-6">
+          <div className="flex items-center gap-3">
+            <span className="flex h-10 w-10 items-center justify-center rounded-full bg-primary-100 text-primary-400">
+              <Bot className="h-5 w-5" />
             </span>
-            <span className="text-sm text-success-text">● Online</span>
+            <div className="flex flex-col">
+              <span className="font-bold font-heading text-fg-default">
+                Asisten LARISIN
+              </span>
+              <span className="text-sm text-success-text">● Online</span>
+            </div>
           </div>
+          <Button type="button" variant="outline" size="sm" onClick={resetConversation}>
+            <RotateCcw className="h-4 w-4" />
+            Mulai Baru
+          </Button>
         </div>
 
         <div className="flex flex-1 flex-col gap-4 overflow-y-auto p-6">
@@ -91,11 +67,7 @@ export default function ChatbotPage() {
           ))}
         </div>
 
-        <form
-          ref={formRef}
-          onSubmit={handleSend}
-          className="flex items-center gap-3 border-t border-fg-line p-6"
-        >
+        <form onSubmit={handleSend} className="flex items-center gap-3 border-t border-fg-line p-6">
           <input
             value={input}
             onChange={(e) => setInput(e.target.value)}
