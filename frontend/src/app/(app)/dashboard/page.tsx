@@ -1,12 +1,13 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { RefreshCw, ScanLine, TrendingUp } from "lucide-react";
+import { ClipboardList, RefreshCw, ScanLine, TrendingUp } from "lucide-react";
 import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { SalesCompareChart } from "@/components/charts/SalesCompareChart";
 import { DonutChart, type DonutSlice } from "@/components/charts/DonutChart";
 import { QuickScanModal } from "@/components/modals/QuickScanModal";
+import { ManualSaleModal } from "@/components/modals/ManualSaleModal";
 import {
 	getDashboardAnalytics,
 	getDashboardInsight,
@@ -28,6 +29,7 @@ export default function DashboardPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [scanOpen, setScanOpen] = useState(false);
+  const [manualSaleOpen, setManualSaleOpen] = useState(false);
 
   const loadAnalytics = async () => {
     setLoading(true);
@@ -98,6 +100,10 @@ export default function DashboardPage() {
           <Button variant="tertiary" onClick={() => setScanOpen(true)}>
             <ScanLine className="h-5 w-5" />
             Quick Scan
+          </Button>
+          <Button variant="outline" onClick={() => setManualSaleOpen(true)}>
+            <ClipboardList className="h-5 w-5" />
+            Catat Manual
           </Button>
         </div>
       </div>
@@ -234,6 +240,14 @@ export default function DashboardPage() {
       <QuickScanModal
         open={scanOpen}
         onClose={() => setScanOpen(false)}
+        onSaved={() => {
+          void loadAnalytics();
+          void loadInsight();
+        }}
+      />
+      <ManualSaleModal
+        open={manualSaleOpen}
+        onClose={() => setManualSaleOpen(false)}
         onSaved={() => {
           void loadAnalytics();
           void loadInsight();
