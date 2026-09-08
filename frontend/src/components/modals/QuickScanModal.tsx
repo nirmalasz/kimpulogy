@@ -1,0 +1,335 @@
+"use client";
+
+import { useEffect, useRef, useState } from "react";
+import { Minus, Plus } from "lucide-react";
+import { Button } from "@/components/ui/Button";
+import { Modal } from "@/components/ui/Modal";
+import { getProductBySKU, createSales, type Product } from "@/services/api";
+import { formatQtyWithUnit, quantityStep } from "@/lib/format";
+import { Html5Qrcode, Html5QrcodeSupportedFormats } from "html5-qrcode";
+
+type ScannedItem = {
+  id: number;
+  productId: number;
+  name: string;
+  sku: string;
+  qty: number;
+  stock: number;
+  unit?: string;
+};
+
+type QuickScanModalProps = {
+  open: boolean;
+  onClose: () => void;
+  onSaved?: () => void;
+};
+
+const SCAN_FORMATS = [
+  Html5QrcodeSupportedFormats.QR_CODE,
+  Html5QrcodeSupportedFormats.EAN_13,
+  Html5QrcodeSupportedFormats.EAN_8,
+  Html5QrcodeSupportedFormats.UPC_A,
+  Html5QrcodeSupportedFormats.UPC_E,
+  Html5QrcodeSupportedFormats.CODE_128,
+];
+
+export function QuickScanModal({ open, onClose, onSaved }: QuickScanModalProps) {
+  const [items, setItems] = useState<ScannedItem[]>([]);
+  const [sku, setSku] = useState("");
+  const [lookupError, setLookupError] = useState<string | null>(null);
+  const [searching, setSearching] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [saved, setSaved] = useState(false);
+  const [cameraState, setCameraState] = useState<"starting" | "on" | "error">("starting");
+  const [cameraError, setCameraError] = useState<string | null>(null);
+
+  const scannerRef = useRef<Html5Qrcode | null>(null);
+  const lastDecoded = useRef("");
+
+  const addProduct = (product: Product) => {
+    const step = quantityStep(product.unit);
+    if (product.stock < step) {
+      setLookupError(`${product.name} tidak memiliki stok yang cukup untuk satuan ${product.unit || "pcs"}.`);
+      return;
+    }
+    const existing = items.find((i) => i.productId === Number(product.id));
+    if (existing) {
+      setItems((prev) =>
+        prev.map((i) => (i.id === existing.id
+          ? { ...i, qty: Math.min(i.stock, i.qty + quantityStep(i.unit)) }
+          : i))
+      );
+    } else {
+      setItems((prev) => [
+        ...prev,
+        {
+          id: Date.now(),
+          productId: Number(product.id),
+          name: product.name,
+          sku: product.sku || product.barcode || "",
+          qty: quantityStep(product.unit),
+          stock: product.stock,
+          unit: product.unit,
+        },
+      ]);
+    }
+    setSku("");
+  };
+
+  const addByCode = async (code: string) => {
+    setLookupError(null);
+    try {
+      const product = await getProductBySKU(code);
+      addProduct(product);
+    } catch {
+      setLookupError(`Barcode/SKU "${code}" tidak ditemukan`);
+    }
+  };
+
+  useEffect(() => {
+    if (!open) return;
+    let cancelled = false;
+    (async () => {
+      setCameraState("starting");
+      setCameraError(null);
+
+      const scanner = new Html5Qrcode("quick-scan-reader", {
+        formatsToSupport: SCAN_FORMATS,
+        verbose: false,
+      });
+      scannerRef.current = scanner;
+      try {
+        await scanner.start(
+          { facingMode: "environment" },
+          {
+            fps: 10,
+            qrbox: { width: 260, height: 160 },
+          },
+          (decoded) => {
+            if (cancelled || !decoded || decoded === lastDecoded.current) return;
+            lastDecoded.current = decoded;
+            void addByCode(decoded);
+          },
+          () => {}
+        );
+        if (!cancelled) setCameraState("on");
+      } catch (err) {
+        if (cancelled) return;
+        setCameraState("error");
+        setCameraError(
+          err instanceof Error && err.name === "NotAllowedError"
+            ? "Izin kamera ditolak. Aktifkan akses kamera lalu coba lagi."
+            : "Kamera tidak tersedia. Gunakan input SKU manual."
+        );
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+      scannerRef.current
+        ?.stop()
+        .then(() => scannerRef.current?.clear())
+        .catch(() => {});
+      scannerRef.current = null;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open]);
+
+  const adjustQty = (id: number, delta: number) => {
+    setItems((prev) =>
+      prev.map((item) =>
+        item.id === id
+          ? {
+              ...item,
+              qty: Math.max(quantityStep(item.unit), Math.min(item.stock, item.qty + delta * quantityStep(item.unit))),
+            }
+          : item
+      )
+    );
+  };
+
+const clearAll = () => {
+    setItems([]);
+    setSaved(false);
+  };
+
+  const handleManualAdd = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const trimmed = sku.trim();
+    if (!trimmed) return;
+    setSearching(true);
+    setLookupError(null);
+    try {
+      const product = await getProductBySKU(trimmed);
+      addProduct(product);
+    } catch (err) {
+      setLookupError(err instanceof Error ? err.message : "Produk tidak ditemukan");
+    } finally {
+      setSearching(false);
+    }
+  };
+
+  const handleSave = async () => {
+    if (items.length === 0) return;
+    setSaving(true);
+    setLookupError(null);
+    try {
+      await createSales({
+        items: items.map((i) => ({ product_id: i.productId, qty: i.qty })),
+      });
+      setSaved(true);
+      onSaved?.();
+      setTimeout(() => {
+        setItems([]);
+        setSaved(false);
+        setSku("");
+        onClose();
+      }, 350);
+    } catch (err) {
+      setLookupError(err instanceof Error ? err.message : "Gagal menyimpan penjualan");
+      setSaving(false);
+    }
+  };
+
+  const handleClose = () => {
+    if (!saving) {
+      setItems([]);
+      setSaved(false);
+      setSku("");
+      setLookupError(null);
+      onClose();
+    }
+  };
+
+  return (
+    <Modal
+      open={open}
+      onClose={handleClose}
+      title="Quick Scan"
+      maxWidth="max-w-3xl"
+    >
+      <div className="grid gap-6 md:grid-cols-2">
+        {/* Panel kiri: kamera + input manual */}
+        <div className="flex flex-col gap-4 rounded-xl border border-tertiary-500 bg-tertiary-100 p-4">
+          <div className="relative flex aspect-[16/10] w-full items-center justify-center overflow-hidden rounded-lg border-2 border-primary-500 bg-secondary-100">
+            <div id="quick-scan-reader" className="h-full w-full" />
+            {cameraState !== "on" ? (
+              <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 bg-secondary-100/80">
+                <span className="text-base font-bold font-heading text-secondary-600">
+                  {cameraState === "starting" ? "Menyalakan kamera..." : "Kamera tidak aktif"}
+                </span>
+                {cameraError ? (
+                  <span className="px-4 text-center text-sm text-alert-text">{cameraError}</span>
+                ) : (
+                  <span className="text-sm text-fg-text">Arahkan barcode ke kamera</span>
+                )}
+              </div>
+            ) : (
+              <span className="absolute bottom-2 left-1/2 -translate-x-1/2 rounded-full bg-black/60 px-3 py-1 text-xs font-semibold text-white">
+                Kamera aktif
+              </span>
+            )}
+          </div>
+
+          <form onSubmit={handleManualAdd} className="flex items-end gap-4">
+            <div className="flex min-w-0 flex-1 flex-col gap-1.5">
+              <span className="text-base font-bold font-heading text-fg-default">
+                Masukkan Manual
+              </span>
+              <input
+                value={sku}
+                onChange={(e) => {
+                  setSku(e.target.value);
+                  setLookupError(null);
+                }}
+                placeholder="Masukkan SKU / barcode"
+                className="h-11 w-full rounded-lg border border-neutral-400 bg-bg-default px-3 text-sm text-fg-default placeholder:text-neutral-500 focus:border-primary-300 focus:outline-none"
+              />
+              {lookupError ? (
+                <p className="text-sm text-alert-text">{lookupError}</p>
+              ) : null}
+            </div>
+            <Button type="submit" size="md" className="shrink-0" disabled={searching}>
+              {searching ? "Cari..." : "Masukkan"}
+            </Button>
+          </form>
+        </div>
+
+        {/* Panel kanan: daftar discan + footer */}
+        <div className="flex flex-col gap-4">
+          <div className="flex flex-col overflow-hidden rounded-lg border border-primary-500 bg-tertiary-100">
+            <div className="flex items-center justify-between gap-4 border-b border-primary-500 bg-primary-100 px-3 py-2">
+              <span className="text-base font-bold font-heading text-fg-default">
+                Barang yang telah discan ({items.length})
+              </span>
+              <button
+                type="button"
+                onClick={clearAll}
+                className="shrink-0 text-base font-bold font-heading text-fg-default"
+              >
+                Clear All
+              </button>
+            </div>
+
+            {items.length === 0 ? (
+              <p className="py-6 text-center text-sm text-neutral-500">
+                {saved ? "Penjualan berhasil disimpan!" : "Belum ada barang discan"}
+              </p>
+            ) : (
+              <div className="flex max-h-[19rem] flex-col overflow-y-auto">
+                {items.map((item) => (
+                  <div
+                    key={item.id}
+                    className="flex items-center justify-between gap-3 border-b border-primary-500 px-2 py-3 last:border-b-0"
+                  >
+                    <div className="flex min-w-0 flex-col gap-1">
+                      <span className="truncate text-base font-bold font-heading text-fg-default">
+                        {item.name}
+                      </span>
+                      <span className="truncate text-base text-fg-default">
+                        SKU: {item.sku}
+                      </span>
+                    </div>
+                    <div className="flex shrink-0 items-center gap-1 rounded-full bg-primary-300 px-3 py-1 text-fg-text-contrast">
+                      <button
+                        type="button"
+                        onClick={() => adjustQty(item.id, -1)}
+                        aria-label={`Kurangi jumlah ${item.name}`}
+                        className="flex h-5 w-5 items-center justify-center rounded-full hover:bg-primary-400"
+                      >
+                        <Minus className="h-4 w-4" />
+                      </button>
+                         <span className="w-16 text-center text-sm">{formatQtyWithUnit(item.qty, item.unit)}</span>
+                      <button
+                        type="button"
+                         onClick={() => adjustQty(item.id, 1)}
+                         disabled={item.qty >= item.stock}
+                        aria-label={`Tambah jumlah ${item.name}`}
+                        className="flex h-5 w-5 items-center justify-center rounded-full hover:bg-primary-400"
+                      >
+                        <Plus className="h-4 w-4" />
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
+          <div className="flex items-center justify-end gap-3">
+            <Button variant="outline" size="md" onClick={handleClose}>
+              Batalkan
+            </Button>
+            <Button
+              size="md"
+              onClick={handleSave}
+              disabled={items.length === 0 || saving}
+            >
+              {saving ? "Menyimpan..." : saved ? "Tersimpan" : "Simpan perubahan"}
+            </Button>
+          </div>
+        </div>
+      </div>
+    </Modal>
+  );
+}

@@ -1,5 +1,6 @@
 import { PublicNavbar } from "@/components/layout/PublicNavbar";
 import { Button } from "@/components/ui/Button";
+import { LandingIllustration } from "@/components/illustrations/Illustrations";
 
 export default function LandingPage() {
   return (
@@ -23,11 +24,9 @@ export default function LandingPage() {
           </section>
           <section
             aria-hidden="true"
-            className="hidden aspect-[458/394] items-center justify-center rounded-2xl bg-tertiary-100 md:flex"
+            className="hidden md:block"
           >
-            <span className="text-7xl font-bold font-heading text-tertiary-500">
-              L
-            </span>
+            <LandingIllustration />
           </section>
         </div>
       </main>

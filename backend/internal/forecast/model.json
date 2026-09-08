@@ -1,0 +1,141 @@
+{
+  "source": "train/Penjualan Toko Sembako.csv",
+  "model_type": "moving_average_baseline",
+  "trained_at": "2026-09-06T16:34:28Z",
+  "horizon": 7,
+  "products": {
+    "beras": {
+      "label": "beras",
+      "avg_daily": 4.22,
+      "std_daily": 3.15,
+      "day_weights": {
+        "Friday": 0.631578947368421,
+        "Saturday": 1.0657894736842104,
+        "Sunday": 1.8,
+        "Thursday": 1.4210526315789473,
+        "Wednesday": 0.5
+      },
+      "sample_days": 9
+    },
+    "detergen": {
+      "label": "detergen",
+      "avg_daily": 5.45,
+      "std_daily": 3.2,
+      "day_weights": {
+        "Monday": 0.5,
+        "Saturday": 1.4666666666666668,
+        "Sunday": 1.0083333333333333,
+        "Thursday": 0.7333333333333334,
+        "Tuesday": 0.5
+      },
+      "sample_days": 11
+    },
+    "gula": {
+      "label": "gula",
+      "avg_daily": 5.4,
+      "std_daily": 1.85,
+      "day_weights": {
+        "Sunday": 0.5555555555555555,
+        "Thursday": 0.7407407407407407,
+        "Tuesday": 1.111111111111111,
+        "Wednesday": 1.4814814814814814
+      },
+      "sample_days": 5
+    },
+    "kopi": {
+      "label": "kopi",
+      "avg_daily": 7.36,
+      "std_daily": 2.71,
+      "day_weights": {
+        "Friday": 1.5617283950617284,
+        "Monday": 1.0185185185185186,
+        "Saturday": 0.9506172839506173,
+        "Sunday": 0.5432098765432098,
+        "Tuesday": 0.9506172839506173,
+        "Wednesday": 0.5432098765432098
+      },
+      "sample_days": 11
+    },
+    "mie instan": {
+      "label": "mie instan",
+      "avg_daily": 7.88,
+      "std_daily": 1.83,
+      "day_weights": {
+        "Friday": 1.2698412698412698,
+        "Monday": 1.2698412698412698,
+        "Saturday": 1.0793650793650793,
+        "Sunday": 0.7619047619047619,
+        "Thursday": 0.8888888888888888,
+        "Tuesday": 0.8888888888888888
+      },
+      "sample_days": 8
+    },
+    "minyak goreng": {
+      "label": "minyak goreng",
+      "avg_daily": 5.25,
+      "std_daily": 1.79,
+      "day_weights": {
+        "Monday": 0.9523809523809523,
+        "Saturday": 1.2380952380952381,
+        "Tuesday": 0.5714285714285714
+      },
+      "sample_days": 4
+    },
+    "sabun": {
+      "label": "sabun",
+      "avg_daily": 4.46,
+      "std_daily": 3.1,
+      "day_weights": {
+        "Friday": 0.5,
+        "Monday": 0.9712643678160918,
+        "Saturday": 0.896551724137931,
+        "Sunday": 0.896551724137931,
+        "Thursday": 1.793103448275862,
+        "Tuesday": 1.456896551724138,
+        "Wednesday": 0.5
+      },
+      "sample_days": 13
+    },
+    "susu": {
+      "label": "susu",
+      "avg_daily": 6.38,
+      "std_daily": 3.77,
+      "day_weights": {
+        "Friday": 0.5,
+        "Monday": 1.3052208835341366,
+        "Saturday": 1.4879518072289155,
+        "Sunday": 0.5220883534136546,
+        "Wednesday": 1.0180722891566265
+      },
+      "sample_days": 13
+    },
+    "teh": {
+      "label": "teh",
+      "avg_daily": 4.78,
+      "std_daily": 3.46,
+      "day_weights": {
+        "Friday": 0.627906976744186,
+        "Sunday": 0.5,
+        "Thursday": 0.5,
+        "Tuesday": 1.255813953488372,
+        "Wednesday": 1.7790697674418605
+      },
+      "sample_days": 9
+    },
+    "telur": {
+      "label": "telur",
+      "avg_daily": 7,
+      "std_daily": 3.16,
+      "day_weights": {
+        "Friday": 1.2857142857142858,
+        "Monday": 0.619047619047619,
+        "Saturday": 1.4285714285714286,
+        "Sunday": 0.5,
+        "Thursday": 1.3333333333333335,
+        "Tuesday": 0.9047619047619048,
+        "Wednesday": 1
+      },
+      "sample_days": 14
+    }
+  }
+}

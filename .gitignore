@@ -1,0 +1,4 @@
+.playwright-mcp/
+.next/
+node_modules/
+

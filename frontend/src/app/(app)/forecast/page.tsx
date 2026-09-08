@@ -1,87 +1,311 @@
-import { Package, ShoppingCart, Wallet } from "lucide-react";
-import { Card } from "@/components/ui/Card";
-import { StatCard, type StatCardProps } from "@/components/ui/StatCard";
+"use client";
 
-const forecastStats: StatCardProps[] = [
-  {
-    icon: <ShoppingCart className="h-6 w-6" />,
-    label: "Perkiraan Pesanan",
-    value: "145",
-    trend: "+9%",
-  },
-  {
-    icon: <Wallet className="h-6 w-6" />,
-    label: "Perkiraan Omzet",
-    value: "Rp 2.800.000",
-    trend: "+14%",
-  },
-  {
-    icon: <Package className="h-6 w-6" />,
-    label: "Stok Dibutuhkan",
-    value: "72",
-    trend: "+3%",
-  },
-];
+import { useEffect, useState } from "react";
+import { Package, RefreshCw, ShoppingCart, TrendingUp, Wallet } from "lucide-react";
+import { Button } from "@/components/ui/Button";
+import { Card } from "@/components/ui/Card";
+import { Modal } from "@/components/ui/Modal";
+import { Input } from "@/components/ui/Input";
+import { formatQtyWithUnit, quantityStep } from "@/lib/format";
+import {
+  getForecastRestock,
+  createPurchase,
+  type RestockResponse,
+  type RestockRecommendation,
+} from "@/services/api";
+
+const URGENCY_META: Record<string, { label: string; badge: string }> = {
+  habis: { label: "Habis", badge: "bg-alert-solid text-white" },
+  urgent: { label: "Urgent", badge: "bg-secondary-600 text-white" },
+  soon: { label: "Segera", badge: "bg-secondary-400 text-white" },
+  ok: { label: "Aman", badge: "bg-success-solid text-white" },
+};
 
 export default function ForecastPage() {
+  const [data, setData] = useState<RestockResponse | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [toast, setToast] = useState<string | null>(null);
+  const [target, setTarget] = useState<RestockRecommendation | null>(null);
+  const [qty, setQty] = useState("");
+  const [saving, setSaving] = useState(false);
+
+  const load = async () => {
+    try {
+      const res = await getForecastRestock();
+      setData(res);
+      setError(null);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Gagal memuat rekomendasi restock");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const refresh = () => {
+    setLoading(true);
+    void load();
+  };
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await getForecastRestock();
+        if (cancelled) return;
+        setData(res);
+        setError(null);
+      } catch (err) {
+        if (cancelled) return;
+        setError(err instanceof Error ? err.message : "Gagal memuat rekomendasi restock");
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const openRestock = (rec: RestockRecommendation) => {
+    setTarget(rec);
+    setQty(String(rec.recommended_restock));
+    setSaving(false);
+  };
+
+  const confirmRestock = async () => {
+    if (!target) return;
+    const n = Number(qty);
+    const step = quantityStep(target.unit);
+    const stepAligned = Math.abs(n / step - Math.round(n / step)) < 0.000001;
+    if (!Number.isFinite(n) || n <= 0 || !stepAligned) {
+      setToast("Jumlah harus angka lebih dari 0");
+      return;
+    }
+    setSaving(true);
+    try {
+      await createPurchase({ product_id: target.product_id, qty: n });
+      setToast(`${target.name}: stok bertambah ${n}`);
+      setTarget(null);
+      await load();
+    } catch (err) {
+      setToast(err instanceof Error ? err.message : "Gagal mencatat pembelian");
+      setSaving(false);
+    }
+  };
+
+  const needsRestock = data?.recommendations.filter((r) => r.urgency !== "ok") || [];
+  const demandTop = data?.recommendations
+    ? [...data.recommendations].sort((a, b) => b.forecast_7d - a.forecast_7d).slice(0, 3)
+    : [];
+
   return (
     <div className="flex flex-col gap-6">
-      <h1 className="text-3xl font-bold font-heading text-fg-default">
-        Forecast
-      </h1>
+      <div className="flex flex-wrap items-center justify-between gap-4">
+        <div>
+          <h1 className="text-4xl font-bold font-heading text-fg-default">Forecast</h1>
+          <p className="text-base text-neutral-500">
+            Rekomendasi restock berbasis prediksi kebutuhan 7 hari
+          </p>
+        </div>
+        <Button
+          variant="secondary"
+          onClick={refresh}
+          title="Refresh Data"
+          aria-label="Refresh Data"
+        >
+          <RefreshCw className={`h-4 w-4 ${loading ? "animate-spin" : ""}`} />
+        </Button>
+      </div>
+
+      {error && (
+        <div className="flex items-center justify-between rounded-xl bg-alert-bg p-4 text-sm text-alert-text">
+          <span>{error}</span>
+          <Button size="sm" variant="secondary" onClick={refresh}>
+            Coba Lagi
+          </Button>
+        </div>
+      )}
+
+      {toast && (
+        <div className="rounded-xl bg-info-bg p-3 text-sm text-info-text">{toast}</div>
+      )}
+
       <div className="grid gap-6 sm:grid-cols-2 xl:grid-cols-3">
-        {forecastStats.map((stat) => (
-          <StatCard key={stat.label} {...stat} />
-        ))}
+        <div className="flex flex-col gap-2 rounded-lg border-2 border-tertiary-500 bg-tertiary-100 p-4">
+          <span className="flex items-center gap-2 text-2xl font-bold font-heading text-fg-default">
+            <ShoppingCart className="h-6 w-6 text-secondary-600" />
+            Perlu Restock
+          </span>
+          <span className="text-2xl font-bold font-heading text-secondary-600">
+            {loading && !data ? "…" : needsRestock.length}
+          </span>
+        </div>
+        <div className="flex flex-col gap-2 rounded-lg border-2 border-tertiary-500 bg-tertiary-100 p-4">
+          <span className="flex items-center gap-2 text-2xl font-bold font-heading text-fg-default">
+            <TrendingUp className="h-6 w-6 text-secondary-600" />
+            Permintaan Tertinggi
+          </span>
+          <span className="text-2xl font-bold font-heading text-secondary-600">
+            {demandTop[0]?.name ?? "—"}
+          </span>
+        </div>
+        <div className="flex flex-col gap-2 rounded-lg border-2 border-tertiary-500 bg-tertiary-100 p-4">
+          <span className="flex items-center gap-2 text-2xl font-bold font-heading text-fg-default">
+            <Package className="h-6 w-6 text-secondary-600" />
+            Model
+          </span>
+          <span className="text-2xl font-bold font-heading text-secondary-600">
+            {data?.model_type === "moving_average_baseline" ? "Moving Avg" : data?.model_type ?? "…"}
+          </span>
+        </div>
       </div>
+
+      <Card padded={false} className="overflow-hidden">
+        <div className="flex items-center justify-between border-b border-fg-line px-4 py-3">
+          <span className="text-lg font-bold font-heading text-fg-default">
+            Rekomendasi Restock (7 hari)
+          </span>
+          {data ? (
+            <span className="text-xs text-neutral-500">
+              {data.source} · {data.trained_at?.slice(0, 10)}
+            </span>
+          ) : null}
+        </div>
+        <div className="grid grid-cols-[minmax(0,2fr)_1fr_1fr_1fr_1fr_auto] items-center gap-3 border-b border-fg-line bg-secondary-100 px-4 py-2 text-sm font-bold font-heading text-fg-default">
+          <span>Produk</span>
+          <span className="text-center">Stok</span>
+          <span className="text-center">Kebutuhan 7d</span>
+          <span className="text-center">Rekomendasi</span>
+          <span className="text-center">Status</span>
+          <span className="w-24 text-right">Aksi</span>
+        </div>
+        <div className="flex flex-col">
+          {loading && !data ? (
+            <p className="py-8 text-center text-sm text-neutral-500">Memuat rekomendasi...</p>
+          ) : data?.recommendations.length === 0 ? (
+            <p className="py-8 text-center text-sm text-neutral-500">
+              Belum ada data produk. Tambahkan produk dulu di halaman Stok.
+            </p>
+          ) : (
+            data?.recommendations.map((rec) => {
+              const meta = URGENCY_META[rec.urgency];
+              return (
+                <div
+                  key={rec.product_id}
+                  className="grid grid-cols-[minmax(0,2fr)_1fr_1fr_1fr_1fr_auto] items-center gap-3 border-b border-fg-line px-4 py-3 last:border-b-0"
+                >
+                  <div className="flex min-w-0 flex-col">
+                    <span className="truncate font-semibold text-fg-default">{rec.name}</span>
+                    {rec.sku ? <span className="truncate text-xs text-neutral-500">{rec.sku}</span> : null}
+                  </div>
+                  <span className="text-center text-fg-text">{formatQtyWithUnit(rec.current_stock, rec.unit)}</span>
+                  <span className="text-center text-fg-text">{formatQtyWithUnit(rec.forecast_7d, rec.unit)}</span>
+                  <span className="text-center font-bold text-secondary-600">
+                    {formatQtyWithUnit(rec.recommended_restock, rec.unit)}
+                  </span>
+                  <span className="flex justify-center">
+                    <span className={`inline-block rounded-full px-3 py-1 text-xs font-semibold ${meta.badge}`}>
+                      {meta.label}
+                    </span>
+                  </span>
+                  <span className="flex justify-end">
+                    <Button
+                      size="sm"
+                      disabled={rec.recommended_restock <= 0}
+                      onClick={() => openRestock(rec)}
+                    >
+                      <Wallet className="h-4 w-4" />
+                      Catat
+                    </Button>
+                  </span>
+                </div>
+              );
+            })
+          )}
+        </div>
+      </Card>
+
       <div className="grid gap-6 xl:grid-cols-2">
-        <Card className="flex flex-col gap-4">
-          <h2 className="text-lg font-bold font-heading text-fg-default">
-            Prediksi Penjualan
-          </h2>
-          <div className="flex h-[308px] flex-1 items-center justify-center rounded-xl bg-tertiary-100">
-            <span className="text-sm font-semibold text-tertiary-500">
-              Grafik prediksi penjualan akan tampil di sini
-            </span>
+        <Card className="flex flex-col gap-4 rounded-xl bg-neutral-200">
+          <h2 className="text-lg font-bold font-heading text-fg-default">Permintaan Teratas</h2>
+          <div className="flex flex-col gap-3">
+            {demandTop.map((rec) => (
+              <div key={rec.product_id} className="flex items-center justify-between gap-4">
+                <span className="text-sm font-semibold text-fg-default">{rec.name}</span>
+                <div className="h-2.5 flex-1 overflow-hidden rounded-full bg-neutral-300">
+                  <div
+                    className="h-full rounded-full bg-secondary-500"
+                    style={{
+                      width: `${demandTop[0].forecast_7d > 0 ? (rec.forecast_7d / demandTop[0].forecast_7d) * 100 : 0}%`,
+                    }}
+                  />
+                </div>
+                <span className="w-16 text-right text-sm font-bold text-fg-default">
+                   {formatQtyWithUnit(rec.forecast_7d, rec.unit)}
+                </span>
+              </div>
+            ))}
+            {demandTop.length === 0 ? (
+              <p className="text-sm text-neutral-500">Belum ada data.</p>
+            ) : null}
           </div>
         </Card>
-        <Card className="flex flex-col gap-4">
-          <h2 className="text-lg font-bold font-heading text-fg-default">
-            Prediksi Stok
-          </h2>
-          <div className="flex h-[308px] flex-1 items-center justify-center rounded-xl bg-tertiary-100">
-            <span className="text-sm font-semibold text-tertiary-500">
-              Grafik prediksi stok akan tampil di sini
-            </span>
-          </div>
-        </Card>
-      </div>
-      <div className="grid gap-6 xl:grid-cols-3">
-        <Card className="flex flex-col gap-3">
-          <h3 className="font-bold font-heading text-fg-default">
-            Rekomendasi Restock
-          </h3>
+
+        <Card className="flex flex-col gap-4 rounded-xl bg-neutral-200">
+          <h2 className="text-lg font-bold font-heading text-fg-default">Tentang Model</h2>
           <p className="text-sm text-fg-text">
-            Seblak Basah diperkirakan habis dalam 3 hari.
+            Rekomendasi dihitung dari rata-rata permintaan harian (moving average) per produk,
+            dengan penyesuaian hari-dalam-seminggu dan stok aman (p90). Saat data penjualan harian
+            warungmu menumpuk, model akan dilatih ulang pada data tersebut (ARIMA/Prophet).
           </p>
-        </Card>
-        <Card className="flex flex-col gap-3">
-          <h3 className="font-bold font-heading text-fg-default">
-            Produk Terlaris
-          </h3>
-          <p className="text-sm text-fg-text">
-            Seblak Ceker tetap jadi produk terlaris minggu ini.
-          </p>
-        </Card>
-        <Card className="flex flex-col gap-3">
-          <h3 className="font-bold font-heading text-fg-default">
-            Saran Penambahan Stok
-          </h3>
-          <p className="text-sm text-fg-text">
-            Tambah stok minuman menjelang akhir pekan.
+          <p className="text-xs text-neutral-500">
+            Sumber base: {data?.source || "belum dilatih"} · Horizon {data?.horizon ?? 7} hari
           </p>
         </Card>
       </div>
+
+      <Modal
+        open={!!target}
+        onClose={() => setTarget(null)}
+        title={target ? `Catat Pembelian — ${target.name}` : undefined}
+      >
+        {target ? (
+          <div className="flex flex-col gap-5">
+            <div className="grid grid-cols-2 gap-3 rounded-xl bg-bg-subtle p-4 text-sm">
+              <span className="text-neutral-500">Stok saat ini</span>
+              <span className="text-right font-medium text-fg-default">
+                {formatQtyWithUnit(target.current_stock, target.unit)}
+              </span>
+              <span className="text-neutral-500">Rekomendasi</span>
+              <span className="text-right font-medium text-secondary-600">
+                {formatQtyWithUnit(target.recommended_restock, target.unit)}
+              </span>
+              <span className="text-neutral-500">Perkiraan kebutuhan 7 hari</span>
+              <span className="text-right font-medium text-fg-default">
+                 {formatQtyWithUnit(target.forecast_7d, target.unit)}
+              </span>
+            </div>
+            <Input
+              label="Jumlah beli"
+              type="number"
+              min={1}
+              value={qty}
+              onChange={(e) => setQty(e.target.value)}
+              step={quantityStep(target.unit)}
+              placeholder="Masukkan jumlah"
+            />
+            <div className="flex gap-3">
+              <Button variant="outline" size="lg" onClick={() => setTarget(null)}>
+                Batal
+              </Button>
+              <Button size="lg" fullWidth onClick={confirmRestock} disabled={saving}>
+                {saving ? "Menyimpan..." : "Simpan Pembelian"}
+              </Button>
+            </div>
+          </div>
+        ) : null}
+      </Modal>
     </div>
   );
 }

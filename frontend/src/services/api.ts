@@ -1,7 +1,6 @@
-const API_BASE_URL =
-  typeof window !== "undefined" && window.location.hostname !== "localhost"
-    ? `http://${window.location.hostname}:8080/api/v1`
-    : process.env.NEXT_PUBLIC_API_URL || "http://34.101.48.5:8080/api/v1";
+import { getToken, clearToken } from "./auth";
+
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "/api/v1";
 
 export interface Transaction {
   id: number;
@@ -39,6 +38,11 @@ export interface Product {
   price: number;
   cost?: number;
   stock: number;
+  unit?: string;
+  sku?: string;
+  barcode?: string;
+  expiry_date?: string;
+  min_stock?: number;
 }
 
 export interface Order {
@@ -60,63 +64,361 @@ export interface DashboardMetrics {
   products_sold: number;
 }
 
-export async function getFinanceSummary(): Promise<FinanceSummary> {
-  const res = await fetch(`${API_BASE_URL}/finance/summary`, { cache: "no-store" });
+export interface WeeklyMix {
+  label: string;
+  value: number;
+}
+
+export interface SalesPoint {
+  date: string;
+  label: string;
+  qty: number;
+  amount: number;
+}
+
+export interface TopProduct {
+  name: string;
+  qty: number;
+  profit: number;
+  profit_str: string;
+  unit: string;
+}
+
+export interface Reminder {
+  type: "low_stock" | "expiring";
+  product: string;
+  info: string;
+}
+
+export interface DashboardAnalytics {
+  weekly_mix: WeeklyMix[];
+  this_week: SalesPoint[];
+  last_week: SalesPoint[];
+  top_products: TopProduct[];
+  reminders: Reminder[];
+  today_income: number;
+  today_expense: number;
+}
+
+export interface AIInsight {
+  summary: string;
+  observations: string[];
+  actions: string[];
+  confidence: "low" | "medium" | "high";
+  period: string;
+  generated_at: string;
+}
+
+export interface FinanceComponent {
+  label: string;
+  value: number;
+}
+
+export interface FinanceComponents {
+  rows: FinanceComponent[];
+}
+
+export interface User {
+  id: number;
+  shop_id: number;
+  name: string;
+  email: string;
+  role: string;
+  avatar_url?: string;
+}
+
+export interface Shop {
+  id: number;
+  name: string;
+  address: string;
+}
+
+export interface AuthResponse {
+  token: string;
+  user: User;
+  shop: Shop;
+}
+
+async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
+  const headers: Record<string, string> = {
+    "Content-Type": "application/json",
+    ...(options.headers as Record<string, string>),
+  };
+  const token = getToken();
+  if (token) headers.Authorization = `Bearer ${token}`;
+
+  const res = await fetch(`${API_BASE_URL}${path}`, {
+    ...options,
+    headers,
+    cache: "no-store",
+  });
+
+  if (res.status === 401) {
+    clearToken();
+  }
   if (!res.ok) {
-    throw new Error(`Failed to fetch finance summary: ${res.statusText}`);
+    let message = res.statusText;
+    try {
+      const body = await res.json();
+      if (body?.error) message = body.error;
+    } catch {
+      /* ignore */
+    }
+    throw new Error(message);
   }
   return res.json();
 }
 
-export async function getTransactions(): Promise<Transaction[]> {
-  const res = await fetch(`${API_BASE_URL}/finance/transactions`, { cache: "no-store" });
-  if (!res.ok) {
-    throw new Error(`Failed to fetch transactions: ${res.statusText}`);
-  }
-  return res.json();
-}
+// --- Auth ---
 
-export async function createTransaction(payload: CreateTransactionPayload): Promise<Transaction> {
-  const res = await fetch(`${API_BASE_URL}/finance/transactions`, {
+export function login(email: string, password: string): Promise<AuthResponse> {
+  return request("/auth/login", {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ email, password }),
+  });
+}
+
+export function register(payload: {
+  name: string;
+  email: string;
+  password: string;
+  shop_name?: string;
+}): Promise<AuthResponse> {
+  return request("/auth/register", {
+    method: "POST",
     body: JSON.stringify(payload),
   });
-  if (!res.ok) {
-    throw new Error(`Failed to create transaction: ${res.statusText}`);
-  }
-  return res.json();
 }
 
-export async function getProducts(): Promise<Product[]> {
-  const res = await fetch(`${API_BASE_URL}/products`, { cache: "no-store" });
-  if (!res.ok) {
-    throw new Error(`Failed to fetch products: ${res.statusText}`);
-  }
-  const data = await res.json();
-  return data.map((item: any) => ({
-    ...item,
-    id: String(item.id),
-  }));
+export function getMe(): Promise<AuthResponse> {
+  return request("/auth/me");
 }
 
-export async function createProduct(payload: Omit<Product, "id">): Promise<Product> {
-  const res = await fetch(`${API_BASE_URL}/products`, {
+// --- Finance ---
+
+export function getFinanceSummary(): Promise<FinanceSummary> {
+  return request("/finance/summary");
+}
+
+export function getTransactions(): Promise<Transaction[]> {
+  return request("/finance/transactions");
+}
+
+export function createTransaction(payload: CreateTransactionPayload): Promise<Transaction> {
+  return request("/finance/transactions", {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
     body: JSON.stringify(payload),
   });
-  if (!res.ok) {
-    throw new Error(`Failed to create product: ${res.statusText}`);
-  }
-  const data = await res.json();
-  return { ...data, id: String(data.id) };
 }
 
-export async function getDashboardMetrics(): Promise<DashboardMetrics> {
-  const res = await fetch(`${API_BASE_URL}/dashboard/metrics`, { cache: "no-store" });
-  if (!res.ok) {
-    throw new Error(`Failed to fetch dashboard metrics: ${res.statusText}`);
+export function getFinanceComponents(): Promise<FinanceComponents> {
+  return request("/finance/components");
+}
+
+// --- Products ---
+
+export function getProducts(): Promise<Product[]> {
+  return request<Product[]>("/products");
+}
+
+export function createProduct(payload: Omit<Product, "id">): Promise<Product> {
+  return request("/products", {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+}
+
+export function getProductBySKU(sku: string): Promise<Product> {
+  return request(`/products/sku/${encodeURIComponent(sku)}`);
+}
+
+// --- Dashboard ---
+
+export function getDashboardMetrics(): Promise<DashboardMetrics> {
+  return request("/dashboard/metrics");
+}
+
+export function getDashboardAnalytics(): Promise<DashboardAnalytics> {
+  return request("/dashboard/analytics");
+}
+
+// --- Sales / Purchases ---
+
+export interface CreateSalesPayload {
+  items: { product_id: number; qty: number }[];
+}
+
+export interface CreateSalesResponse {
+  sales_created: number;
+  total_amount: number;
+  updated_stock: Record<number, number>;
+}
+
+export function createSales(payload: CreateSalesPayload): Promise<CreateSalesResponse> {
+  return request("/sales", {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+}
+
+export function createPurchase(payload: { product_id: number; qty: number; cost?: number }): Promise<{
+  id: number;
+  product_id: number;
+  new_stock: number;
+}> {
+  return request("/purchases", {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+}
+
+// --- Forecast ---
+
+export interface RestockRecommendation {
+  product_id: number;
+  name: string;
+  sku: string;
+  current_stock: number;
+  min_stock: number;
+  avg_daily: number;
+  forecast_7d: number;
+  p90_7d: number;
+  recommended_restock: number;
+  unit: string;
+  days_to_stockout: number;
+  urgency: "habis" | "urgent" | "soon" | "ok";
+  confidence: "high" | "medium" | "low";
+  in_model: boolean;
+}
+
+export interface RestockResponse {
+  horizon: number;
+  model_type: string;
+  source: string;
+  trained_at: string;
+  recommendations: RestockRecommendation[];
+}
+
+export function getForecastRestock(): Promise<RestockResponse> {
+  return request("/forecast/restock");
+}
+
+// --- Notifications ---
+
+export interface AppNotification {
+  id: string;
+  type: "low_stock" | "expiring" | "order" | "transaction";
+  title: string;
+  body: string;
+  time: string;
+  read: boolean;
+  dismissed?: boolean;
+}
+
+export interface NotificationsResponse {
+  notifications: AppNotification[];
+  unread_count: number;
+}
+
+export function getNotifications(): Promise<NotificationsResponse> {
+  return request("/notifications");
+}
+
+export function updateNotificationState(id: string, state: "read" | "dismissed"): Promise<void> {
+  return request(`/notifications/${encodeURIComponent(id)}`, {
+    method: "PATCH",
+    body: JSON.stringify({ state }),
+  });
+}
+
+// --- Chatbot ---
+
+const CHAT_SESSION_KEY = "larisin_chat_session";
+const CHAT_SCOPE_KEY = "larisin_chat_scope";
+
+export interface ChatSource {
+  title: string;
+  url: string;
+  domain?: string;
+}
+
+export function clearChatbotSession() {
+  if (typeof window !== "undefined") {
+    window.sessionStorage.removeItem(CHAT_SESSION_KEY);
+    window.sessionStorage.removeItem(CHAT_SCOPE_KEY);
   }
-  return res.json();
+}
+
+export async function sendChatbotMessage(message: string, scope?: string): Promise<{
+  reply: string;
+  session_id?: string;
+  source?: string;
+  scope?: string;
+  sources?: ChatSource[];
+}> {
+  const sessionId = typeof window === "undefined"
+    ? undefined
+    : window.sessionStorage.getItem(CHAT_SESSION_KEY) || undefined;
+  const sessionScope = scope || (typeof window === "undefined"
+    ? undefined
+    : window.sessionStorage.getItem(CHAT_SCOPE_KEY) || undefined);
+  const response = await request<{
+    reply: string;
+    session_id?: string;
+    source?: string;
+    scope?: string;
+    sources?: ChatSource[];
+  }>("/chatbot/message", {
+    method: "POST",
+    body: JSON.stringify({ message, session_id: sessionId, scope: sessionScope }),
+  });
+  if (typeof window !== "undefined" && response.session_id) {
+    window.sessionStorage.setItem(CHAT_SESSION_KEY, response.session_id);
+  }
+  if (typeof window !== "undefined" && response.scope) {
+    window.sessionStorage.setItem(CHAT_SCOPE_KEY, response.scope);
+  }
+  return response;
+}
+
+export function getDashboardInsight(): Promise<AIInsight> {
+  return request("/dashboard/insights");
+}
+
+// --- Product update/delete ---
+
+export function updateProduct(id: string, payload: Partial<Product> & { name: string }): Promise<void> {
+  return request(`/products/${id}`, {
+    method: "PUT",
+    body: JSON.stringify(payload),
+  });
+}
+
+export function deleteProduct(id: string): Promise<void> {
+  return request(`/products/${id}`, {
+    method: "DELETE",
+  });
+}
+
+// --- Settings ---
+
+export function updatePassword(old_password: string, new_password: string): Promise<void> {
+  return request("/auth/password", {
+    method: "PUT",
+    body: JSON.stringify({ old_password, new_password }),
+  });
+}
+
+export function updateShop(name: string): Promise<{ shop: Shop }> {
+  return request("/shops", {
+    method: "PUT",
+    body: JSON.stringify({ name }),
+  });
+}
+
+export function updateProfile(payload: { name: string; email: string; avatar_url?: string }): Promise<{ user: User }> {
+  return request("/auth/profile", {
+    method: "PUT",
+    body: JSON.stringify(payload),
+  });
 }

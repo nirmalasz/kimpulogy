@@ -1,7 +1,7 @@
 import Link from "next/link";
 import type { ComponentPropsWithoutRef, ReactNode } from "react";
 
-type Variant = "primary" | "secondary" | "outline" | "ghost" | "surface";
+type Variant = "primary" | "secondary" | "outline" | "ghost" | "surface" | "tertiary";
 type Size = "sm" | "md" | "lg";
 
 type ButtonBaseProps = {
@@ -33,6 +33,8 @@ const variantClasses: Record<Variant, string> = {
     "bg-transparent text-primary-500 hover:bg-neutral-100 focus-visible:ring-primary-300",
   surface:
     "bg-primary-100 text-primary-400 hover:bg-primary-200 focus-visible:ring-primary-300",
+  tertiary:
+    "bg-tertiary-200 text-fg-default hover:bg-tertiary-200/80 focus-visible:ring-tertiary-500",
 };
 
 const sizeClasses: Record<Size, string> = {
@@ -52,8 +54,8 @@ function baseClasses(variant: Variant, size: Size, fullWidth?: boolean) {
 }
 
 export function Button(props: ButtonProps) {
-  const { variant = "primary", size = "md", fullWidth, ...rest } = props;
-  const classes = baseClasses(variant, size, fullWidth);
+  const { variant = "primary", size = "md", fullWidth, className = "", ...rest } = props;
+  const classes = [baseClasses(variant, size, fullWidth), className].join(" ");
 
   if (rest.href !== undefined && "href" in rest) {
     const { href, children, ...anchorRest } = rest as ButtonAsLink;
