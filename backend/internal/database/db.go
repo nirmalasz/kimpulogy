@@ -112,6 +112,18 @@ func createTables(db *sql.DB) error {
 			created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
 			FOREIGN KEY (shop_id) REFERENCES shops(id)
 		);`,
+		`CREATE TABLE IF NOT EXISTS notification_states (
+			shop_id INTEGER NOT NULL,
+			user_id INTEGER NOT NULL,
+			notification_id TEXT NOT NULL,
+			state TEXT NOT NULL CHECK (state IN ('read', 'dismissed')),
+			read_at DATETIME,
+			dismissed_at DATETIME,
+			updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+			PRIMARY KEY (shop_id, user_id, notification_id),
+			FOREIGN KEY (shop_id) REFERENCES shops(id),
+			FOREIGN KEY (user_id) REFERENCES users(id)
+		);`,
 	}
 
 	for _, q := range queries {

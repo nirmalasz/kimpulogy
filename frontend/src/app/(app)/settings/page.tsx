@@ -26,8 +26,9 @@ export default function SettingsPage() {
     setSaving("shop");
     setMsg(null);
     try {
-      await updateShop(shopName.trim());
-      setShopName(shopName.trim());
+      const response = await updateShop(shopName.trim());
+      setShopName(response.shop.name);
+      setShopNameState(response.shop.name);
       flash("ok", "Nama warung diperbarui.");
     } catch (err) {
       flash("err", err instanceof Error ? err.message : "Gagal memperbarui nama warung");
@@ -41,8 +42,11 @@ export default function SettingsPage() {
     setSaving("profile");
     setMsg(null);
     try {
-      await updateProfile({ name: name.trim(), email: email.trim(), avatar_url: avatarUrl.trim() });
-      setProfile(name.trim(), email.trim(), avatarUrl.trim());
+      const response = await updateProfile({ name: name.trim(), email: email.trim(), avatar_url: avatarUrl.trim() });
+      setProfile(response.user.name, response.user.email, response.user.avatar_url);
+      setName(response.user.name);
+      setEmail(response.user.email);
+      setAvatarUrl(response.user.avatar_url ?? "");
       flash("ok", "Profil diperbarui.");
     } catch (err) {
       flash("err", err instanceof Error ? err.message : "Gagal memperbarui profil");

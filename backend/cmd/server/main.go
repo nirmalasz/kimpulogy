@@ -194,6 +194,13 @@ func main() {
 		}
 		notificationHandler.GetNotifications(w, r)
 	}))
+	mux.HandleFunc("/api/v1/notifications/", handlers.AuthRequired(func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodPatch {
+			http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+			return
+		}
+		notificationHandler.UpdateState(w, r)
+	}))
 
 	// Chatbot endpoint
 	mux.HandleFunc("/api/v1/chatbot/message", handlers.AuthRequired(func(w http.ResponseWriter, r *http.Request) {

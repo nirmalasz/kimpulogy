@@ -37,6 +37,19 @@ func (h *ChatbotHandler) HandleMessage(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusBadRequest, "message is too long")
 		return
 	}
+	if h.AI != nil && h.AI.MarketEnabled() && h.AI.IsMarketQuery(req.Message) {
+		if reply, sessionID, sources, err := h.AI.MarketChat(r.Context(), userIDFrom(r), req.SessionID, req.Message); err == nil {
+			w.Header().Set("Content-Type", "application/json")
+			_ = json.NewEncoder(w).Encode(models.ChatbotResponse{
+				Reply: reply, SessionID: sessionID, Source: "gemini", Scope: "public_market", Sources: sources,
+			})
+			return
+		} else {
+			log.Printf("AI market request failed: %v", err)
+			writeError(w, http.StatusBadGateway, "informasi pasar tidak tersedia")
+			return
+		}
+	}
 	if h.AI != nil && h.AI.Enabled() {
 		if reply, sessionID, err := h.AI.Chat(r.Context(), shopID, userIDFrom(r), req.SessionID, req.Message); err == nil {
 			w.Header().Set("Content-Type", "application/json")

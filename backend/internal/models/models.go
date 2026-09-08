@@ -236,11 +236,13 @@ type CreatePurchaseResponse struct {
 // --- Notifications ---
 
 type AppNotification struct {
-	ID    string `json:"id"`
-	Type  string `json:"type"` // low_stock | expiring | order | transaction
-	Title string `json:"title"`
-	Body  string `json:"body"`
-	Time  string `json:"time"`
+	ID        string `json:"id"`
+	Type      string `json:"type"` // low_stock | expiring | order | transaction
+	Title     string `json:"title"`
+	Body      string `json:"body"`
+	Time      string `json:"time"`
+	Read      bool   `json:"read"`
+	Dismissed bool   `json:"dismissed,omitempty"`
 }
 
 type NotificationsResponse struct {
@@ -282,9 +284,21 @@ type ChatbotRequest struct {
 }
 
 type ChatbotResponse struct {
-	Reply     string `json:"reply"`
-	SessionID string `json:"session_id,omitempty"`
-	Source    string `json:"source,omitempty"`
+	Reply     string       `json:"reply"`
+	SessionID string       `json:"session_id,omitempty"`
+	Source    string       `json:"source,omitempty"`
+	Scope     string       `json:"scope,omitempty"`
+	Sources   []ChatSource `json:"sources,omitempty"`
+}
+
+type ChatSource struct {
+	Title  string `json:"title"`
+	URL    string `json:"url"`
+	Domain string `json:"domain,omitempty"`
+}
+
+type UpdateNotificationRequest struct {
+	State string `json:"state"` // read | dismissed
 }
 
 type AIInsight struct {

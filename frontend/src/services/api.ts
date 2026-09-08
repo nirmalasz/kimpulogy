@@ -308,6 +308,8 @@ export interface AppNotification {
   title: string;
   body: string;
   time: string;
+  read: boolean;
+  dismissed?: boolean;
 }
 
 export interface NotificationsResponse {
@@ -319,9 +321,22 @@ export function getNotifications(): Promise<NotificationsResponse> {
   return request("/notifications");
 }
 
+export function updateNotificationState(id: string, state: "read" | "dismissed"): Promise<void> {
+  return request(`/notifications/${encodeURIComponent(id)}`, {
+    method: "PATCH",
+    body: JSON.stringify({ state }),
+  });
+}
+
 // --- Chatbot ---
 
 const CHAT_SESSION_KEY = "larisin_chat_session";
+
+export interface ChatSource {
+  title: string;
+  url: string;
+  domain?: string;
+}
 
 export function clearChatbotSession() {
   if (typeof window !== "undefined") {
@@ -333,6 +348,8 @@ export async function sendChatbotMessage(message: string): Promise<{
   reply: string;
   session_id?: string;
   source?: string;
+  scope?: string;
+  sources?: ChatSource[];
 }> {
   const sessionId = typeof window === "undefined"
     ? undefined
@@ -341,6 +358,8 @@ export async function sendChatbotMessage(message: string): Promise<{
     reply: string;
     session_id?: string;
     source?: string;
+    scope?: string;
+    sources?: ChatSource[];
   }>("/chatbot/message", {
     method: "POST",
     body: JSON.stringify({ message, session_id: sessionId }),
@@ -379,14 +398,14 @@ export function updatePassword(old_password: string, new_password: string): Prom
   });
 }
 
-export function updateShop(name: string): Promise<void> {
+export function updateShop(name: string): Promise<{ shop: Shop }> {
   return request("/shops", {
     method: "PUT",
     body: JSON.stringify({ name }),
   });
 }
 
-export function updateProfile(payload: { name: string; email: string; avatar_url?: string }): Promise<void> {
+export function updateProfile(payload: { name: string; email: string; avatar_url?: string }): Promise<{ user: User }> {
   return request("/auth/profile", {
     method: "PUT",
     body: JSON.stringify(payload),

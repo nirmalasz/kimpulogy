@@ -1,15 +1,36 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Bell, LogOut, Search } from "lucide-react";
+import { Bell, LogOut, Search, X } from "lucide-react";
 import { useAuth } from "@/components/auth/AuthProvider";
-import { getNotifications, type AppNotification } from "@/services/api";
+import {
+  getNotifications,
+  updateNotificationState,
+  type AppNotification,
+} from "@/services/api";
 
 export function Topbar() {
   const { user, shop, logout } = useAuth();
   const [notifOpen, setNotifOpen] = useState(false);
   const [notifs, setNotifs] = useState<AppNotification[]>([]);
   const [unread, setUnread] = useState(0);
+
+  const setNotificationState = async (notification: AppNotification, state: "read" | "dismissed") => {
+    const previous = notifs;
+    const wasUnread = !notification.read;
+    setNotifs((current) =>
+      state === "dismissed"
+        ? current.filter((item) => item.id !== notification.id)
+        : current.map((item) => item.id === notification.id ? { ...item, read: true } : item)
+    );
+    if (wasUnread) setUnread((count) => Math.max(0, count - 1));
+    try {
+      await updateNotificationState(notification.id, state);
+    } catch {
+      setNotifs(previous);
+      if (wasUnread) setUnread((count) => count + 1);
+    }
+  };
 
   useEffect(() => {
     let cancelled = false;
@@ -77,20 +98,37 @@ export function Topbar() {
                       notifs.map((notif) => (
                         <div
                           key={notif.id}
-                          className="flex gap-3 border-b border-fg-line px-4 py-3 last:border-b-0 hover:bg-bg-subtle"
+                          className={[
+                            "flex gap-3 border-b border-fg-line px-4 py-3 last:border-b-0 hover:bg-bg-subtle",
+                            notif.read ? "opacity-70" : "",
+                          ].join(" ")}
+                          role="button"
+                          tabIndex={0}
+                          onClick={() => void setNotificationState(notif, "read")}
+                          onKeyDown={(event) => {
+                            if (event.key === "Enter" || event.key === " ") {
+                              event.preventDefault();
+                              void setNotificationState(notif, "read");
+                            }
+                          }}
                         >
                           <span className="mt-1.5 h-2 w-2 shrink-0 rounded-full bg-secondary-600" />
-                          <div className="flex min-w-0 flex-col gap-0.5">
-                            <span className="text-sm font-semibold text-fg-default">
-                              {notif.title}
-                            </span>
-                            <span className="truncate text-sm text-fg-text">
-                              {notif.body}
-                            </span>
-                            <span className="text-xs text-neutral-500">
-                              {notif.time}
-                            </span>
+                          <div className="flex min-w-0 flex-1 flex-col gap-0.5">
+                            <span className="text-sm font-semibold text-fg-default">{notif.title}</span>
+                            <span className="truncate text-sm text-fg-text">{notif.body}</span>
+                            <span className="text-xs text-neutral-500">{notif.time}</span>
                           </div>
+                          <button
+                            type="button"
+                            aria-label={`Hapus ${notif.title}`}
+                            className="shrink-0 self-start rounded p-1 text-neutral-500 hover:bg-neutral-200 hover:text-fg-default"
+                            onClick={(event) => {
+                              event.stopPropagation();
+                              void setNotificationState(notif, "dismissed");
+                            }}
+                          >
+                            <X className="h-4 w-4" />
+                          </button>
                         </div>
                       ))
                     )}

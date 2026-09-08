@@ -73,7 +73,10 @@ export function ChatbotProvider({ children }: { children: ReactNode }) {
     setSending(true);
     try {
       const response = await sendChatbotMessage(trimmed);
-      setMessages((prev) => [...prev, { role: "bot", text: response.reply }]);
+      const sources = response.sources?.length
+        ? `\n\n**Sumber:**\n${response.sources.map((source) => `- [${source.title || source.domain || source.url}](${source.url})`).join("\n")}`
+        : "";
+      setMessages((prev) => [...prev, { role: "bot", text: response.reply + sources }]);
     } catch (err) {
       setMessages((prev) => [
         ...prev,
