@@ -139,9 +139,18 @@ export function Topbar() {
           </div>
 
           <div className="flex items-center gap-3">
-            <span className="flex h-12 w-12 items-center justify-center rounded-full bg-secondary-300 text-lg font-bold text-primary-500">
-              {(user?.name || "Z").charAt(0).toUpperCase()}
-            </span>
+            {user?.avatar_url ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={user.avatar_url}
+                alt={`${user.name} avatar`}
+                className="h-12 w-12 rounded-full object-cover"
+              />
+            ) : (
+              <span className="flex h-12 w-12 items-center justify-center rounded-full bg-secondary-300 text-lg font-bold text-primary-500">
+                {(user?.name || "Z").charAt(0).toUpperCase()}
+              </span>
+            )}
             <div className="hidden flex-col leading-tight sm:flex">
               <span className="font-semibold text-fg-default">
                 {user?.name || "Zafran"}
